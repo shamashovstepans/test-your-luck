@@ -1,4 +1,4 @@
-import RAPIER from '@dimforge/rapier3d'
+import RAPIER from '@dimforge/rapier3d-compat'
 import * as THREE from 'three'
 
 const DEFAULT_GRAVITY = 9.81
