@@ -1,6 +1,11 @@
 import RAPIER from '@dimforge/rapier3d-compat'
 import * as THREE from 'three'
 
+/** Must be called and awaited before using any physics functions. */
+export async function initRapier(): Promise<void> {
+  await RAPIER.init()
+}
+
 const DEFAULT_GRAVITY = 9.81
 const FIXED_STEP = 1 / 60
 

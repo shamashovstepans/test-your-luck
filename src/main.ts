@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
-import { createScene, createDiceModelEnvironment, onResize, getCameraForAllRooms, getCameraForRoom, startCameraAnimation, updateCameraAnimation, setMainLightDirection, type CameraAnimationState, type CameraView } from './scene'
-import { createPhysicsWorld, throwDice, stepPhysics, isSettled, isOutOfBounds, syncRigidBodyToMesh, updateDiceMass, setGravity, getDiceResult, getFixedStep, type PhysicsState, type ThrowOptions, type SpawnLayout, type TargetMode, type PatternPreset } from './physics'
+import { createScene, onResize, getCameraForAllRooms, getCameraForRoom, startCameraAnimation, updateCameraAnimation, setMainLightDirection, type CameraAnimationState, type CameraView } from './scene'
+import { initRapier, createPhysicsWorld, throwDice, stepPhysics, isSettled, isOutOfBounds, syncRigidBodyToMesh, updateDiceMass, setGravity, getDiceResult, getFixedStep, type PhysicsState, type ThrowOptions, type SpawnLayout, type TargetMode, type PatternPreset } from './physics'
 import { createRoomVisuals, createSingleDice, setDiceGlossiness, updateWallTransparency, applyDiceComboVFX, clearDiceComboVFX } from './visuals'
 
 const SETTLE_THRESHOLD = 0.01
@@ -135,25 +135,27 @@ type RoomState = {
 
 type ScreenMode = 'grid' | 'preview' | 'probability'
 
-function init() {
+async function init() {
+  await initRapier()
   const app = document.getElementById('app')!
   const container = document.getElementById('canvas-container')!
   const glossinessSlider = document.getElementById('glossiness') as HTMLInputElement
   const getGlossiness = () => parseFloat(glossinessSlider?.value ?? '0.88')
 
-  // Dice model (source of truth): create env and dice first, then main scene uses them
+  // Create main scene first (env map from main renderer - avoids 0-size canvas in game mode)
+  const sceneState = createScene(container)
+  const diceModelEnv = sceneState.scene.environment!
+
+  // Dice preview (uses shared env from main scene)
   const dicePreviewContainer = document.getElementById('dice-preview-container')!
   const dicePreviewCanvas = document.getElementById('dice-preview-canvas') as HTMLCanvasElement
   const dicePreviewRenderer = new THREE.WebGLRenderer({ canvas: dicePreviewCanvas, antialias: true })
   dicePreviewRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-  const diceModelEnv = createDiceModelEnvironment(dicePreviewRenderer)
   const dicePreviewScene = new THREE.Scene()
   dicePreviewScene.environment = diceModelEnv
   dicePreviewScene.background = diceModelEnv
   const diceModel = createSingleDice(getGlossiness())
   dicePreviewScene.add(diceModel)
-
-  const sceneState = createScene(container, diceModelEnv)
   const { scene, camera, renderer, controls, lighting } = sceneState
 
   const weightSlider = document.getElementById('dice-weight') as HTMLInputElement
@@ -1464,4 +1466,21 @@ function init() {
   animate()
 }
 
-init()
+async function bootstrap() {
+  try {
+    await init()
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    const el = document.createElement('div')
+    el.style.cssText = 'position:fixed;inset:0;background:#1a1a2e;color:#e74c3c;padding:24px;font-family:monospace;font-size:14px;overflow:auto;z-index:9999'
+    el.textContent = `Failed to start: ${msg}\n\n${err instanceof Error ? err.stack : ''}`
+    document.body.prepend(el)
+    console.error('Init error:', err)
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => requestAnimationFrame(() => requestAnimationFrame(bootstrap)))
+} else {
+  requestAnimationFrame(() => requestAnimationFrame(bootstrap))
+}
