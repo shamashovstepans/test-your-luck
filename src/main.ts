@@ -153,7 +153,7 @@ async function init() {
   dicePreviewRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
   const dicePreviewScene = new THREE.Scene()
   dicePreviewScene.environment = diceModelEnv
-  dicePreviewScene.background = diceModelEnv
+  dicePreviewScene.background = new THREE.Color(0x000000)
   const diceModel = createSingleDice(getGlossiness())
   dicePreviewScene.add(diceModel)
   const { scene, camera, renderer, controls, lighting } = sceneState

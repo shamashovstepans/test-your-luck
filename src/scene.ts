@@ -59,10 +59,10 @@ export function createScene(container: HTMLElement, envMap?: THREE.Texture): Sce
   mainLight.shadow.bias = -0.0001
   scene.add(mainLight)
 
-  // Environment from dice model (shared)
+  // Environment for dice reflections; background is black
   const env = envMap ?? createDiceModelEnvironment(renderer)
   scene.environment = env
-  scene.background = env
+  scene.background = new THREE.Color(0x000000)
 
   // Ground plane — gives spatial context and scale for the dice area
   const groundSize = 180
