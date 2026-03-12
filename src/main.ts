@@ -1368,9 +1368,9 @@ async function init() {
     const simSpeed = parseInt(simSpeedSlider.value, 10) || 1
     const fixedStep = getFixedStep()
     accumulatedTime += deltaSec * simSpeed
-    // Prevent runaway catch-up after tab stalls and keep timing deterministic.
-    accumulatedTime = Math.min(accumulatedTime, fixedStep * 30)
-    const stepsPerFrame = Math.min(Math.floor(accumulatedTime / fixedStep), 30)
+    // Allow broad catch-up so simulation speed stays real-time in slower browsers.
+    accumulatedTime = Math.min(accumulatedTime, fixedStep * 240)
+    const stepsPerFrame = Math.min(Math.floor(accumulatedTime / fixedStep), 240)
     if (stepsPerFrame > 0) {
       accumulatedTime -= stepsPerFrame * fixedStep
     }
