@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
-import { createScene, onResize, getCameraForAllRooms, getCameraForRoom, startCameraAnimation, updateCameraAnimation, setMainLightDirection, type CameraAnimationState, type CameraView } from './scene'
+import { createScene, createDiceModelEnvironment, onResize, getCameraForAllRooms, getCameraForRoom, startCameraAnimation, updateCameraAnimation, setMainLightDirection, type CameraAnimationState, type CameraView } from './scene'
 import { initRapier, createPhysicsWorld, throwDice, stepPhysics, isSettled, isOutOfBounds, syncRigidBodyToMesh, updateDiceMass, setGravity, getDiceResult, getFixedStep, type PhysicsState, type ThrowOptions, type SpawnLayout, type TargetMode, type PatternPreset } from './physics'
 import { createRoomVisuals, createSingleDice, setDiceGlossiness, updateWallTransparency, applyDiceComboVFX, clearDiceComboVFX } from './visuals'
 
@@ -142,20 +142,19 @@ async function init() {
   const glossinessSlider = document.getElementById('glossiness') as HTMLInputElement
   const getGlossiness = () => parseFloat(glossinessSlider?.value ?? '0.88')
 
-  // Create main scene first (env map from main renderer - avoids 0-size canvas in game mode)
-  const sceneState = createScene(container)
-  const diceModelEnv = sceneState.scene.environment!
-
-  // Dice preview (uses shared env from main scene)
+  // Dice model (source of truth): create env and dice first, then main scene uses them
   const dicePreviewContainer = document.getElementById('dice-preview-container')!
   const dicePreviewCanvas = document.getElementById('dice-preview-canvas') as HTMLCanvasElement
   const dicePreviewRenderer = new THREE.WebGLRenderer({ canvas: dicePreviewCanvas, antialias: true })
   dicePreviewRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+  const diceModelEnv = createDiceModelEnvironment(dicePreviewRenderer)
   const dicePreviewScene = new THREE.Scene()
   dicePreviewScene.environment = diceModelEnv
   dicePreviewScene.background = new THREE.Color(0x000000)
   const diceModel = createSingleDice(getGlossiness())
   dicePreviewScene.add(diceModel)
+
+  const sceneState = createScene(container, diceModelEnv)
   const { scene, camera, renderer, controls, lighting } = sceneState
 
   const weightSlider = document.getElementById('dice-weight') as HTMLInputElement
