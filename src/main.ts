@@ -1363,7 +1363,7 @@ async function init() {
   function animate() {
     requestAnimationFrame(animate)
     const now = performance.now()
-    const deltaSec = Math.min(Math.max(0, (now - lastFrameTime) / 1000), 0.1)
+    const deltaSec = Math.max(0, (now - lastFrameTime) / 1000)
     lastFrameTime = now
     const simSpeed = parseInt(simSpeedSlider.value, 10) || 1
     const fixedStep = getFixedStep()
