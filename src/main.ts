@@ -1355,14 +1355,18 @@ async function init() {
   }
 
   let lastFrameTime = performance.now()
+  let accumulatedTime = 0
   function animate() {
     requestAnimationFrame(animate)
     const now = performance.now()
-    let deltaSec = Math.min(Math.max(0, (now - lastFrameTime) / 1000), 1)
+    const deltaSec = Math.min(Math.max(0, (now - lastFrameTime) / 1000), 0.1)
     lastFrameTime = now
-    const simSpeed = parseInt(simSpeedSlider.value, 10)
+    const simSpeed = parseInt(simSpeedSlider.value, 10) || 1
     const fixedStep = getFixedStep()
-    const stepsPerFrame = Math.min(Math.max(1, Math.round((deltaSec / fixedStep) * simSpeed)), 60)
+    accumulatedTime += deltaSec * simSpeed
+    const steps = Math.floor(accumulatedTime / fixedStep)
+    accumulatedTime -= steps * fixedStep
+    const stepsPerFrame = Math.min(Math.max(1, steps), 60)
 
     if (cameraAnimation) {
       if (updateCameraAnimation(camera, controls, cameraAnimation)) {
