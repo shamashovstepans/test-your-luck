@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dice Simulator</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <div id="screen-tabs" class="debug-only">
+        <button id="tab-grid" class="screen-tab active">Grid</button>
+        <button id="tab-preview" class="screen-tab">Preview</button>
+        <button id="tab-probability" class="screen-tab">Probability</button>
+      </div>
+      <div id="app-main">
+      <div id="scoring-panel" class="scoring-panel">
+        <div class="scoring-header">
+          <h3 class="section-title">Balance</h3>
+          <span id="total-score" class="balance-value">0</span>
+        </div>
+        <details class="scoring-guide" id="scoring-guide">
+          <summary>How scoring works</summary>
+          <div class="scoring-guide-list">
+            <div class="scoring-guide-item"><span class="scoring-guide-combo">Single</span><span class="scoring-guide-mult">×1</span></div>
+            <div class="scoring-guide-item"><span class="scoring-guide-combo">Pair</span><span class="scoring-guide-mult">×2</span></div>
+            <div class="scoring-guide-item"><span class="scoring-guide-combo">Triple</span><span class="scoring-guide-mult">×3</span></div>
+            <div class="scoring-guide-item"><span class="scoring-guide-combo">Small straight</span><span class="scoring-guide-mult">×3</span></div>
+            <div class="scoring-guide-item"><span class="scoring-guide-combo">Quad</span><span class="scoring-guide-mult">×4</span></div>
+            <div class="scoring-guide-item"><span class="scoring-guide-combo">Large straight</span><span class="scoring-guide-mult">×4</span></div>
+            <div class="scoring-guide-item"><span class="scoring-guide-combo">Full house</span><span class="scoring-guide-mult">×5</span></div>
+            <div class="scoring-guide-item"><span class="scoring-guide-combo">Five</span><span class="scoring-guide-mult">×5</span></div>
+            <div class="scoring-guide-item"><span class="scoring-guide-combo">Six / Six of a kind</span><span class="scoring-guide-mult">×6</span></div>
+          </div>
+          <p class="scoring-guide-hint">Each group: value × count × multiplier. Extra combos multiply the basic total.</p>
+        </details>
+        <div id="scoring-list"></div>
+      </div>
+      <div id="main-area">
+      <div id="canvas-container">
+        <div id="fullscreen-balance-widget" class="fullscreen-balance-widget" aria-hidden="true">
+          <span class="fullscreen-widget-label">Balance</span>
+          <span id="fullscreen-balance" class="fullscreen-widget-value">0</span>
+        </div>
+        <div id="fullscreen-throw-list" class="fullscreen-throw-list" aria-hidden="true"></div>
+        <button id="test-luck-btn" class="game-btn" title="Throw dice (Space). Press ` to show debug">Test luck</button>
+        <button id="fullscreen-btn" class="overlay-btn overlay-btn-fullscreen debug-only" title="Full screen (F)" aria-label="Full screen">⛶</button>
+        <button id="camera-view-btn" class="overlay-btn overlay-btn-camera debug-only" title="Switch to bottom view">↑</button>
+        <button id="all-rooms-btn" class="overlay-btn debug-only" title="View all rooms">All rooms</button>
+        <button id="back-to-grid-btn" class="overlay-btn overlay-btn-resume debug-only" title="Back to Grid" style="display: none">Back to Grid</button>
+      </div>
+      <div id="probability-panel" class="probability-panel debug-only" style="display: none">
+        <div class="probability-chart-section">
+          <h4 class="chart-title">Sum (6–36)</h4>
+          <div id="probability-chart-sum"></div>
+          <div id="probability-legend-sum"></div>
+        </div>
+        <div class="probability-chart-section">
+          <h4 class="chart-title">Rarity patterns</h4>
+          <div id="probability-chart-pattern"></div>
+          <div id="probability-legend-pattern"></div>
+        </div>
+      </div>
+      </div>
+      <div id="controls" class="debug-only">
+        <div class="controls-section dice-preview-section">
+          <h3 class="section-title">Dice model</h3>
+          <label class="slider-control">
+            <span class="slider-label">Glossiness</span>
+            <input type="range" id="glossiness" min="0" max="1" step="0.05" value="0.88" />
+            <span class="slider-value" id="glossiness-value">0.88</span>
+          </label>
+          <div id="dice-preview-container">
+            <canvas id="dice-preview-canvas"></canvas>
+          </div>
+        </div>
+        <div class="controls-section" id="grid-throw-section">
+          <button id="grid-throw-btn">Throw</button>
+        </div>
+
+        <div class="controls-section" id="preview-throw-section" style="display: none">
+          <button id="preview-throw-btn">Throw</button>
+        </div>
+
+        <div class="controls-section">
+          <h3 class="section-title">Lighting</h3>
+          <label class="slider-control">
+            <span class="slider-label">Intensity</span>
+            <input type="range" id="light-intensity" min="0" max="2" step="0.1" value="0.8" />
+            <span class="slider-value" id="light-intensity-value">0.8</span>
+          </label>
+          <label class="slider-control">
+            <span class="slider-label">Azimuth</span>
+            <input type="range" id="light-azimuth" min="0" max="360" step="5" value="45" />
+            <span class="slider-value" id="light-azimuth-value">45°</span>
+          </label>
+          <label class="slider-control">
+            <span class="slider-label">Elevation</span>
+            <input type="range" id="light-elevation" min="0" max="90" step="5" value="50" />
+            <span class="slider-value" id="light-elevation-value">50°</span>
+          </label>
+          <label class="slider-control slider-control-color">
+            <span class="slider-label">Color</span>
+            <input type="color" id="light-color" value="#ffffff" title="Light color" />
+            <span class="slider-value" id="light-color-value">#ffffff</span>
+          </label>
+          <label class="slider-control">
+            <span class="slider-label">Ambient</span>
+            <input type="range" id="light-ambient" min="0" max="1" step="0.05" value="0.35" />
+            <span class="slider-value" id="light-ambient-value">0.35</span>
+          </label>
+        </div>
+
+        <div class="controls-section">
+          <h3 class="section-title">Physics</h3>
+          <label class="slider-control">
+            <span class="slider-label">Dice count</span>
+            <input type="range" id="dice-count" min="1" max="50" step="1" value="6" />
+            <span class="slider-value" id="dice-count-value">6</span>
+          </label>
+          <label class="slider-control">
+            <span class="slider-label">Power</span>
+            <input type="range" id="throw-power" min="0.5" max="50" step="0.5" value="5" />
+            <span class="slider-value" id="power-value">5</span>
+          </label>
+          <label class="slider-control">
+            <span class="slider-label">Weight</span>
+            <input type="range" id="dice-weight" min="0.5" max="20" step="0.5" value="3" />
+            <span class="slider-value" id="weight-value">3</span>
+          </label>
+          <label class="slider-control">
+            <span class="slider-label">Gravity</span>
+            <input type="range" id="gravity" min="0" max="30" step="0.5" value="9.81" />
+            <span class="slider-value" id="gravity-value">9.81</span>
+          </label>
+          <label class="slider-control">
+            <span class="slider-label">Rotation</span>
+            <input type="range" id="rotation" min="0" max="10" step="0.5" value="2" />
+            <span class="slider-value" id="rotation-value">2</span>
+          </label>
+        </div>
+
+        <div class="controls-section">
+          <h3 class="section-title">Variation</h3>
+          <label class="slider-control">
+            <span class="slider-label">Dir spread</span>
+            <input type="range" id="direction-spread" min="0" max="1" step="0.05" value="0.35" />
+            <span class="slider-value" id="direction-spread-value">0.35</span>
+          </label>
+          <label class="slider-control">
+            <span class="slider-label">Speed var</span>
+            <input type="range" id="speed-variation" min="0" max="1" step="0.05" value="0.3" />
+            <span class="slider-value" id="speed-variation-value">0.3</span>
+          </label>
+        </div>
+
+        <div class="controls-section">
+          <h3 class="section-title">Patterns</h3>
+          <label class="select-control">
+            <span class="slider-label">Preset</span>
+            <select id="pattern-preset">
+              <option value="none">None</option>
+              <option value="stack">Stack</option>
+              <option value="scatter">Scatter</option>
+              <option value="ring">Ring</option>
+              <option value="line">Line</option>
+            </select>
+          </label>
+          <label class="select-control">
+            <span class="slider-label">Spawn layout</span>
+            <select id="spawn-layout">
+              <option value="grid">Grid</option>
+              <option value="line">Line</option>
+              <option value="pyramid">Pyramid</option>
+              <option value="circle">Circle</option>
+              <option value="corners">Corners</option>
+              <option value="diamond">Diamond</option>
+              <option value="cluster">Cluster</option>
+            </select>
+          </label>
+          <label class="select-control">
+            <span class="slider-label">Target mode</span>
+            <select id="target-mode">
+              <option value="single">Single</option>
+              <option value="spread">Spread</option>
+              <option value="corner">Corner</option>
+              <option value="center">Center</option>
+              <option value="ring">Ring</option>
+              <option value="grid">Grid</option>
+            </select>
+          </label>
+          <label class="checkbox-control">
+            <input type="checkbox" id="random-preset" />
+            Random preset each throw
+          </label>
+        </div>
+
+        <div class="controls-section">
+          <h3 class="section-title">Options</h3>
+          <label class="checkbox-control">
+            <input type="checkbox" id="aim-edge" checked />
+            Aim edge
+          </label>
+          <label class="checkbox-control">
+            <input type="checkbox" id="auto-loop" />
+            Auto-loop
+          </label>
+        </div>
+
+        <div class="controls-section">
+          <h3 class="section-title">Camera</h3>
+          <p class="section-hint">Position camera with orbit/zoom, then save as initial position for preview mode.</p>
+          <div id="camera-debug" class="camera-debug" aria-live="polite">
+            <div>Pos: <span id="camera-pos">—</span></div>
+            <div>Target: <span id="camera-target">—</span></div>
+            <div>Rotation: <span id="camera-rotation">—</span></div>
+          </div>
+          <button id="save-camera-btn">Save camera position</button>
+          <button id="reset-camera-btn">Reset to default</button>
+        </div>
+
+        <div class="controls-section" id="grid-controls-section">
+          <h3 class="section-title">Grid</h3>
+          <label class="slider-control">
+            <span class="slider-label">Grid size</span>
+            <input type="range" id="grid-side" min="2" max="5" step="1" value="2" />
+            <span class="slider-value" id="grid-side-value">2</span>
+          </label>
+          <label class="slider-control">
+            <span class="slider-label">Sims at once</span>
+            <input type="range" id="max-concurrent" min="1" max="4" step="1" value="4" />
+            <span class="slider-value" id="max-concurrent-value">4</span>
+          </label>
+          <label class="slider-control">
+            <span class="slider-label">Zoom</span>
+            <input type="range" id="grid-zoom" min="0.5" max="2" step="0.1" value="1" />
+            <span class="slider-value" id="grid-zoom-value">1</span>
+          </label>
+        </div>
+
+        <div class="controls-section">
+          <h3 class="section-title">Simulation</h3>
+          <label class="slider-control">
+            <span class="slider-label">Sim speed</span>
+            <input type="range" id="sim-speed" min="1" max="500" step="1" value="1" />
+            <span class="slider-value" id="sim-speed-value">1</span>
+          </label>
+        </div>
+
+        <div class="controls-section">
+          <button id="save-defaults-btn">Save as defaults</button>
+          <button id="defaults-btn">Apply defaults</button>
+          <button id="export-defaults-btn" title="Download current settings as JSON">Export defaults for build</button>
+        </div>
+      </div>
+      <div id="history-panel" class="debug-only">
+        <div class="history-header">
+          <h3 class="section-title">History</h3>
+          <span id="history-stats"></span>
+          <button id="clear-history-btn" title="Clear history">&times;</button>
+        </div>
+        <div id="history-list"></div>
+      </div>
+      </div>
+    </div>
+    <div id="notification-container" class="notification-container"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
