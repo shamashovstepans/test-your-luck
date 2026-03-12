@@ -34,9 +34,13 @@ export function createScene(container: HTMLElement, envMap?: THREE.Texture): Sce
   camera.position.set(30, 20, 30)
   camera.lookAt(0, 0, 0)
 
-  const renderer = new THREE.WebGLRenderer({ antialias: true })
+  const renderer = new THREE.WebGLRenderer({
+    antialias: true,
+    powerPreference: 'high-performance',
+    alpha: false
+  })
   renderer.setSize(container.clientWidth, container.clientHeight)
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5))
   renderer.shadowMap.enabled = true
   renderer.shadowMap.type = THREE.PCFSoftShadowMap
   container.appendChild(renderer.domElement)
@@ -48,8 +52,8 @@ export function createScene(container: HTMLElement, envMap?: THREE.Texture): Sce
   const mainLight = new THREE.DirectionalLight(0xffffff, 0.8)
   mainLight.position.set(5, 8, 5) // azimuth 45°, elevation ~48°
   mainLight.castShadow = true
-  mainLight.shadow.mapSize.width = 1024
-  mainLight.shadow.mapSize.height = 1024
+  mainLight.shadow.mapSize.width = 512
+  mainLight.shadow.mapSize.height = 512
   mainLight.shadow.camera.near = 0.5
   mainLight.shadow.camera.far = 60
   mainLight.shadow.camera.left = -30

@@ -145,8 +145,12 @@ async function init() {
   // Dice model (source of truth): create env and dice first, then main scene uses them
   const dicePreviewContainer = document.getElementById('dice-preview-container')!
   const dicePreviewCanvas = document.getElementById('dice-preview-canvas') as HTMLCanvasElement
-  const dicePreviewRenderer = new THREE.WebGLRenderer({ canvas: dicePreviewCanvas, antialias: true })
-  dicePreviewRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+  const dicePreviewRenderer = new THREE.WebGLRenderer({
+    canvas: dicePreviewCanvas,
+    antialias: true,
+    powerPreference: 'high-performance'
+  })
+  dicePreviewRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5))
   const diceModelEnv = createDiceModelEnvironment(dicePreviewRenderer)
   const dicePreviewScene = new THREE.Scene()
   dicePreviewScene.environment = diceModelEnv
@@ -1364,9 +1368,12 @@ async function init() {
     const simSpeed = parseInt(simSpeedSlider.value, 10) || 1
     const fixedStep = getFixedStep()
     accumulatedTime += deltaSec * simSpeed
-    const steps = Math.floor(accumulatedTime / fixedStep)
-    accumulatedTime -= steps * fixedStep
-    const stepsPerFrame = Math.min(Math.max(1, steps), 60)
+    // Prevent runaway catch-up after tab stalls and keep timing deterministic.
+    accumulatedTime = Math.min(accumulatedTime, fixedStep * 30)
+    const stepsPerFrame = Math.min(Math.floor(accumulatedTime / fixedStep), 30)
+    if (stepsPerFrame > 0) {
+      accumulatedTime -= stepsPerFrame * fixedStep
+    }
 
     if (cameraAnimation) {
       if (updateCameraAnimation(camera, controls, cameraAnimation)) {
