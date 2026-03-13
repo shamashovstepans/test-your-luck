@@ -3,7 +3,6 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { createScene, createDiceModelEnvironment, onResize, setPerformanceMode, getCameraForAllRooms, getCameraForRoom, startCameraAnimation, updateCameraAnimation, setMainLightDirection, type CameraAnimationState, type CameraView } from './scene'
 import { initRapier, createPhysicsWorld, throwDice, stepPhysics, isSettled, isOutOfBounds, syncRigidBodyToMesh, updateDiceMass, setGravity, getDiceResult, getFixedStep, type PhysicsState, type ThrowOptions, type SpawnLayout, type TargetMode, type PatternPreset } from './physics'
 import { createRoomVisuals, createSingleDice, setDiceGlossiness, updateWallTransparency, applyDiceComboVFX, clearDiceComboVFX } from './visuals'
-import { reportThrow, subscribeToGlobalStats, type GlobalStats } from './analytics'
 
 const SETTLE_THRESHOLD = 0.01
 const BASE_SETTLE_FRAMES = 10
@@ -322,14 +321,12 @@ async function init() {
 
   const fullscreenBalanceWidget = document.getElementById('fullscreen-balance-widget')!
   const fullscreenThrowList = document.getElementById('fullscreen-throw-list')!
-  const globalStatsWidget = document.getElementById('global-stats-widget')!
 
   function setGameMode(enabled: boolean) {
     gameMode = enabled
     app.classList.toggle('game-mode', gameMode)
     fullscreenBalanceWidget.ariaHidden = enabled ? 'false' : 'true'
     fullscreenThrowList.ariaHidden = enabled ? 'false' : 'true'
-    globalStatsWidget.ariaHidden = enabled ? 'false' : 'true'
     if (gameMode) {
       setScreenMode('preview')
       updateGameOverlay()
@@ -768,7 +765,6 @@ async function init() {
     historyList.prepend(el)
     applyHistoryFilter()
     if (screenMode === 'probability') renderProbabilityChart()
-    reportThrow(pattern?.name ?? null)
   }
 
   function replayFromHistory(entry: HistoryEntry) {
@@ -1356,21 +1352,6 @@ async function init() {
     const deg = (r: number) => ((r * 180) / Math.PI).toFixed(1)
     cameraRotationEl.textContent = `(${deg(cam.rotation.x)}°, ${deg(cam.rotation.y)}°, ${deg(cam.rotation.z)}°)`
   }
-
-  function updateGlobalStats(stats: GlobalStats) {
-    const totalEl = document.getElementById('global-total-throws')
-    const widgetEl = document.getElementById('global-stats-total-value')
-    const combosEl = document.getElementById('global-stats-combinations')
-    if (totalEl) totalEl.textContent = stats.totalThrows.toLocaleString()
-    if (widgetEl) widgetEl.textContent = stats.totalThrows.toLocaleString()
-    if (combosEl) {
-      const entries = Object.entries(stats.combinations).sort((a, b) => b[1] - a[1])
-      combosEl.innerHTML = entries.length === 0
-        ? '<span style="color:rgba(255,255,255,0.4)">No combinations yet</span>'
-        : entries.map(([name, count]) => `<div class="combo-row"><span>${name}</span><span>${count.toLocaleString()}</span></div>`).join('')
-    }
-  }
-  subscribeToGlobalStats(updateGlobalStats)
 
   applyDefaults()
   setGameMode(true)
