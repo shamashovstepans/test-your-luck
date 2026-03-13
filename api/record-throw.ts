@@ -24,7 +24,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const body = req.body as { escaped?: boolean; combo?: string; combos?: string[]; balance?: number }
+    const body = req.body as {
+      escaped?: boolean
+      combo?: string
+      combos?: string[]
+      balance?: number
+      score?: number
+      diceResult?: number[]
+      time?: number
+      seed?: number
+      weight?: number
+      gravity?: number
+      options?: unknown
+    }
     const escaped = body.escaped ?? false
     const combos = Array.isArray(body.combos) ? body.combos : (body.combo ? [body.combo] : [])
     const balance = typeof body.balance === 'number' ? body.balance : undefined
@@ -43,8 +55,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
-    if (userId != null && balance !== undefined) {
-      await redis.set(`dice:user:${userId}:balance`, balance)
+    if (userId != null) {
+      if (balance !== undefined) {
+        await redis.set(`dice:user:${userId}:balance`, balance)
+      }
+      await redis.incr(`dice:user:${userId}:throw_count`)
+
+      const throwRecord = JSON.stringify({
+        d: body.diceResult ?? [],
+        s: body.score ?? 0,
+        e: escaped,
+        c: combos,
+        t: body.time ?? Date.now(),
+        seed: body.seed ?? 0,
+        w: body.weight ?? 3,
+        g: body.gravity ?? 9.81,
+        o: body.options ?? {}
+      })
+      await redis.lpush(`dice:user:${userId}:history`, throwRecord)
+      await redis.ltrim(`dice:user:${userId}:history`, 0, 1999)
     }
 
     return res.status(200).json({ ok: true, stored: true })

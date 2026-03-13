@@ -19,27 +19,33 @@ function getUserIdFromCookie(req: VercelRequest): string | null {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const userId = getUserIdFromCookie(req)
   if (!userId) {
-    return res.status(200).json({ balance: 0 })
+    return res.status(200).json({ balance: 0, throwCount: 0 })
   }
 
   try {
     if (!redis) {
-      return res.status(200).json({ balance: 0 })
+      return res.status(200).json({ balance: 0, throwCount: 0 })
     }
 
     const key = `dice:user:${userId}:balance`
 
     if (req.method === 'GET') {
-      const val = await redis.get(key)
-      const balance = Math.max(0, Number(val) || 0)
-      return res.status(200).json({ balance })
+      const [balanceVal, throwCountVal] = await Promise.all([
+        redis.get(key),
+        redis.get(`dice:user:${userId}:throw_count`)
+      ])
+      const balance = Math.max(0, Number(balanceVal) || 0)
+      const throwCount = Math.max(0, Number(throwCountVal) || 0)
+      return res.status(200).json({ balance, throwCount })
     }
 
     if (req.method === 'PUT') {
       const body = req.body as { balance?: number }
       const balance = Math.max(0, Math.floor(Number(body?.balance) || 0))
       await redis.set(key, balance)
-      return res.status(200).json({ balance })
+      const throwCountVal = await redis.get(`dice:user:${userId}:throw_count`)
+      const throwCount = Math.max(0, Number(throwCountVal) || 0)
+      return res.status(200).json({ balance, throwCount })
     }
 
     res.setHeader('Allow', 'GET, PUT')

@@ -779,7 +779,18 @@ async function init() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ diceResult: entry.diceResult, escaped: entry.escaped, combos: allCombos, balance: totalScore })
+      body: JSON.stringify({
+        diceResult: entry.diceResult,
+        escaped: entry.escaped,
+        combos: allCombos,
+        balance: totalScore,
+        score: entry.score,
+        time: entry.time,
+        seed: entry.seed,
+        weight: entry.weight,
+        gravity: entry.gravity,
+        options: entry.options
+      })
     })
       .then((r) => r.json())
       .then((d: { stored?: boolean }) => { if (d.stored) fetchGlobalStats() })
