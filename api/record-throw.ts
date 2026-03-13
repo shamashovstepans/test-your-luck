@@ -10,6 +10,13 @@ const redis = redisUrl && redisToken
 const KEY_TOTAL = 'dice:total_throws'
 const KEY_COMBOS = 'dice:unique_combos'
 
+function getUserIdFromCookie(req: VercelRequest): string | null {
+  const cookie = req.headers.cookie ?? req.headers['cookie']
+  if (typeof cookie !== 'string') return null
+  const match = cookie.match(/dice_user_id=([^;]+)/)
+  return match ? decodeURIComponent(match[1].trim()) : null
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST')
@@ -17,9 +24,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const body = req.body as { escaped?: boolean; combo?: string }
+    const body = req.body as { escaped?: boolean; combo?: string; combos?: string[]; balance?: number }
     const escaped = body.escaped ?? false
-    const combo = body.combo ?? null
+    const combos = Array.isArray(body.combos) ? body.combos : (body.combo ? [body.combo] : [])
+    const balance = typeof body.balance === 'number' ? body.balance : undefined
+    const userId = getUserIdFromCookie(req)
 
     if (!redis) {
       return res.status(200).json({ ok: true, stored: false })
@@ -27,9 +36,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     await redis.incr(KEY_TOTAL)
 
-    if (!escaped && combo) {
-      await redis.sadd(KEY_COMBOS, combo)
-      await redis.incr(`dice:combo:${combo}`)
+    for (const combo of combos) {
+      if (combo && typeof combo === 'string') {
+        await redis.sadd(KEY_COMBOS, combo)
+        await redis.incr(`dice:combo:${combo}`)
+      }
+    }
+
+    if (userId != null && balance !== undefined) {
+      await redis.set(`dice:user:${userId}:balance`, balance)
     }
 
     return res.status(200).json({ ok: true, stored: true })

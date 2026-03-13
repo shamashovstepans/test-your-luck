@@ -6,6 +6,16 @@ import { initRapier, createPhysicsWorld, throwDice, stepPhysics, isSettled, isOu
 import { createRoomVisuals, createSingleDice, setDiceGlossiness, updateWallTransparency, applyDiceComboVFX, clearDiceComboVFX } from './visuals'
 
 const SETTLE_THRESHOLD = 0.01
+const USER_ID_COOKIE = 'dice_user_id'
+const USER_ID_MAX_AGE = 365 * 24 * 60 * 60
+
+function getOrCreateUserId(): string {
+  const match = document.cookie.match(new RegExp(`${USER_ID_COOKIE}=([^;]+)`))
+  if (match) return decodeURIComponent(match[1].trim())
+  const id = crypto.randomUUID?.() ?? `d${Date.now()}-${Math.random().toString(36).slice(2, 11)}`
+  document.cookie = `${USER_ID_COOKIE}=${encodeURIComponent(id)}; path=/; max-age=${USER_ID_MAX_AGE}; samesite=lax`
+  return id
+}
 const BASE_SETTLE_FRAMES = 10
 const BASE_LOOP_DELAY_MS = 1000
 const ROOM_SPACING = 20
@@ -138,6 +148,7 @@ type ScreenMode = 'grid' | 'preview' | 'probability'
 
 async function init() {
   inject()
+  getOrCreateUserId()
   await initRapier()
   const app = document.getElementById('app')!
   const container = document.getElementById('canvas-container')!
@@ -223,6 +234,16 @@ async function init() {
   const fullscreenBalanceEl = document.getElementById('fullscreen-balance')!
   const fullscreenThrowListEl = document.getElementById('fullscreen-throw-list')!
   let totalScore = 0
+
+  fetch('/api/balance', { credentials: 'include' })
+    .then((r) => r.json())
+    .then((d: { balance?: number }) => {
+      const b = d.balance ?? 0
+      totalScore = b
+      totalScoreEl.textContent = String(b)
+      if (gameMode) updateGameOverlay()
+    })
+    .catch(() => {})
 
   // Preview room: lazy-created when switching to preview, destroyed when returning to grid
   let previewPhysics: PhysicsState | null = null
@@ -746,12 +767,19 @@ async function init() {
     updateHistoryStats()
 
     // Report to global analytics (Vercel + shared stats)
+    const allCombos: string[] = []
+    if (!entry.escaped && entry.diceResult.length > 0) {
+      const breakdown = computeScoreBreakdown(entry.diceResult)
+      for (const b of breakdown.badges) allCombos.push(b.combo)
+      if (pattern && !allCombos.includes(pattern.name)) allCombos.push(pattern.name)
+    }
     const comboName = pattern?.name ?? null
     track('Dice Throw', { escaped: !!entry.escaped, combo: comboName ?? 'none', score: entry.score })
     fetch('/api/record-throw', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ diceResult: entry.diceResult, escaped: entry.escaped, combo: comboName })
+      credentials: 'include',
+      body: JSON.stringify({ diceResult: entry.diceResult, escaped: entry.escaped, combos: allCombos, balance: totalScore })
     })
       .then((r) => r.json())
       .then((d: { stored?: boolean }) => { if (d.stored) fetchGlobalStats() })
@@ -809,6 +837,12 @@ async function init() {
     updateGameOverlay()
     seenPatterns.clear()
     updateHistoryStats()
+    fetch('/api/balance', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ balance: 0 })
+    }).catch(() => {})
   })
 
   const globalStatsEl = document.getElementById('global-stats-text')!
@@ -848,7 +882,7 @@ async function init() {
   }
 
   const fetchGlobalStats = () => {
-    fetch('/api/stats')
+    fetch('/api/stats', { credentials: 'include' })
       .then((r) => r.json())
       .then((d: { totalThrows?: number; uniqueCombos?: number; combos?: Record<string, number> }) => {
         const total = d.totalThrows ?? 0
