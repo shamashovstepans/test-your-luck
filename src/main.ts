@@ -81,8 +81,6 @@ function computeScoreBreakdown(diceResult: number[]): ScoreBreakdown {
   const hasSix = Object.values(counts).some((c) => c === 6)
   const sorted = [...diceResult].sort((a, b) => a - b)
   const hasLarge = diceResult.length === 6 && sorted.join('') === '123456'
-  const valsWith2Plus = Object.values(counts).filter((c) => c >= 2).length
-  const hasFullHouse = Object.values(counts).some((c) => c >= 3) && valsWith2Plus >= 2
   const hasSmall = ['12345', '23456'].some((s) =>
     s.split('').every((d) => (counts[+d] ?? 0) >= 1)
   )
@@ -107,16 +105,6 @@ function computeScoreBreakdown(diceResult: number[]): ScoreBreakdown {
     extraMult = 4
     extraCombo = 'Large straight ×4'
     badges.push({ combo: 'Large straight', values: [1, 2, 3, 4, 5, 6], scoreDisplay: `×${extraMult}` })
-  } else if (hasFullHouse) {
-    extraMult = 5
-    extraCombo = 'Full house ×5'
-    const tripleVal = [1, 2, 3, 4, 5, 6].find((v) => (counts[v] ?? 0) >= 3)!
-    const pairVal = [1, 2, 3, 4, 5, 6].find((v) => v !== tripleVal && (counts[v] ?? 0) >= 2)!
-    badges.push({
-      combo: 'Full house',
-      values: [...Array(3).fill(tripleVal), ...Array(2).fill(pairVal)],
-      scoreDisplay: `×${extraMult}`
-    })
   } else if (hasSmall) {
     extraMult = 3
     extraCombo = 'Small straight ×3'
@@ -600,22 +588,22 @@ async function init() {
       { sig: [5, 1], name: 'Five of a kind', desc: '5 same + 1 different' },
       { sig: [4, 2], name: 'Four + pair', desc: '4 same + 2 same' },
       { sig: [4, 1, 1], name: 'Four of a kind', desc: '4 same + 2 different' },
-      { sig: [3, 3], name: 'Full house', desc: '3 of one + 3 of another' },
       { sig: [3, 2, 1], name: 'Three + pair', desc: '3 same + 2 same + 1' },
       { sig: [3, 1, 1, 1], name: 'Three of a kind', desc: '3 same + 3 different' },
       { sig: [2, 2, 2], name: 'Three pairs', desc: '2-2-2 of three values' },
       { sig: [2, 2, 1, 1], name: 'Two pairs', desc: '2 pairs + 2 singletons' },
-      { sig: [2, 1, 1, 1, 1], name: 'One pair', desc: '1 pair + 4 different' },
-      { sig: [1, 1, 1, 1, 1, 1], name: 'Straight', desc: 'All different (1-6)' }
+      { sig: [1, 1, 1, 1, 1, 1], name: 'Large straight', desc: 'All different (1-6)' }
     ]
 
-    return patterns.map(({ sig, name, desc }) => {
+    const result = patterns.map(({ sig, name, desc }) => {
       const k = sig.length
       const valueChoices = fact(6) / fact(6 - k) / groupSymmetry(sig)
       const arrangements = perm(sig)
       const count = Math.round(valueChoices * arrangements)
       return { id: sig.join('-'), name, count, desc }
     })
+    result.push({ id: 'small-straight', name: 'Small straight', count: 3600, desc: '5 consecutive (1-5 or 2-6)' })
+    return result
   })()
 
   /** Classify dice result into a rarity pattern. */
@@ -627,7 +615,14 @@ async function init() {
     }
     const sig = counts.filter(c => c > 0).sort((a, b) => b - a)
     const sigStr = sig.join('-')
-    return RARITY_PATTERNS.find(p => p.id === sigStr) ?? null
+    if (sigStr === '2-1-1-1-1') {
+      const vals = [1, 2, 3, 4, 5, 6].filter((v) => counts[v - 1] >= 1)
+      const has12345 = [1, 2, 3, 4, 5].every((d) => vals.includes(d))
+      const has23456 = [2, 3, 4, 5, 6].every((d) => vals.includes(d))
+      if (has12345 || has23456) return RARITY_PATTERNS.find((p) => p.id === 'small-straight') ?? null
+      return null
+    }
+    return RARITY_PATTERNS.find((p) => p.id === sigStr) ?? null
   }
 
   /** Count distinct sequences for this multiset. Rarity = 1 in (TOTAL_OUTCOMES / count). */
@@ -1132,7 +1127,7 @@ async function init() {
     aimEdge: true,
     autoLoop: false,
     randomPreset: false,
-    simSpeed: 3,
+    simSpeed: 2,
     diceCount: 6,
     gridSide: 2,
     maxConcurrent: 4,
@@ -1656,7 +1651,8 @@ async function init() {
     const now = performance.now()
     const deltaSec = Math.min(Math.max(0, (now - lastFrameTime) / 1000), 0.1)
     lastFrameTime = now
-    const simSpeed = parseInt(simSpeedSlider.value, 10) || 1
+    const simSpeedRaw = parseInt(simSpeedSlider.value, 10)
+    const simSpeed = Number.isNaN(simSpeedRaw) ? 1 : Math.max(0, simSpeedRaw)
 
     // Auto-boost sim speed for slow browsers (once, after ~1s warmup)
     if (!fpsAutoBoostDone) {
@@ -1664,8 +1660,8 @@ async function init() {
       const elapsed = now - fpsMeasureStart
       if (elapsed >= 1000) {
         const avgFps = fpsFrameCount / (elapsed / 1000)
-        if (avgFps < 30 && simSpeed <= 3) {
-          const boost = Math.min(5, Math.max(3, Math.ceil(30 / avgFps)))
+        if (avgFps < 30 && simSpeed <= 2) {
+          const boost = Math.min(10, Math.max(2, Math.ceil(30 / avgFps)))
           simSpeedSlider.value = String(boost)
           document.getElementById('sim-speed-value')!.textContent = String(boost)
           setPerformanceMode(sceneState, container)
@@ -1743,8 +1739,9 @@ async function init() {
             addHistoryEntry({ ...room.lastThrow, diceResult, time: Date.now(), roomIndex: room.roomIndex, score: computeScore(diceResult) })
           }
           if (autoLoopCheckbox.checked) {
-            const settleFrames = Math.max(1, Math.ceil(BASE_SETTLE_FRAMES / simSpeed))
-            const delayMs = Math.max(50, BASE_LOOP_DELAY_MS / simSpeed)
+            const effectiveSpeed = Math.max(0.1, simSpeed)
+            const settleFrames = Math.max(1, Math.ceil(BASE_SETTLE_FRAMES / effectiveSpeed))
+            const delayMs = Math.max(50, BASE_LOOP_DELAY_MS / effectiveSpeed)
             room.settledFrameCount++
             if (room.settledFrameCount >= settleFrames) {
               if (now - room.lastThrowTime >= delayMs) {

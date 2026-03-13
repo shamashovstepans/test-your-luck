@@ -11,9 +11,10 @@ const KEY_TOTAL = 'dice:total_throws'
 const KEY_COMBOS = 'dice:unique_combos'
 
 const COMBO_NAMES = [
-  'Six of a kind', 'Five of a kind', 'Four + pair', 'Four of a kind', 'Full house',
-  'Three + pair', 'Three of a kind', 'Three pairs', 'Two pairs', 'One pair', 'Straight',
-  'single', 'pair', 'triple', 'quad', 'five', 'six', 'Large straight', 'Small straight'
+  'Six of a kind', 'Five of a kind', 'Four + pair', 'Four of a kind',
+  'Three + pair', 'Three of a kind', 'Three pairs', 'Two pairs',
+  'Large straight', 'Small straight',
+  'single', 'pair', 'triple', 'quad', 'five', 'six'
 ]
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
