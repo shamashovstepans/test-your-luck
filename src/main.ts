@@ -1643,6 +1643,28 @@ async function init() {
     }
   })
 
+  const recalculateStatsBtn = document.getElementById('recalculate-stats-btn')!
+  const recalculateStatsStatus = document.getElementById('recalculate-stats-status')!
+  recalculateStatsBtn.addEventListener('click', async () => {
+    recalculateStatsBtn.disabled = true
+    recalculateStatsStatus.textContent = 'Running…'
+    try {
+      const r = await fetch('/api/recalculate-stats', { method: 'POST', credentials: 'include' })
+      const d = await r.json()
+      if (d.ok) {
+        recalculateStatsStatus.textContent = `Done: ${d.totalThrows} throws`
+        fetchGlobalStats()
+      } else {
+        recalculateStatsStatus.textContent = d.error ?? 'Failed'
+      }
+    } catch (err) {
+      recalculateStatsStatus.textContent = 'Error'
+    } finally {
+      recalculateStatsBtn.disabled = false
+      setTimeout(() => { recalculateStatsStatus.textContent = '' }, 3000)
+    }
+  })
+
   document.getElementById('save-defaults-btn')!.addEventListener('click', saveAsDefaults)
   document.getElementById('defaults-btn')!.addEventListener('click', applyDefaults)
   document.getElementById('export-defaults-btn')!.addEventListener('click', () => {

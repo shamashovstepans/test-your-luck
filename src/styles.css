@@ -334,6 +334,12 @@ body {
   color: rgba(255, 255, 255, 0.5);
 }
 
+.recalculate-stats-status {
+  margin-left: 8px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
 .probability-panel {
   flex: 1;
   min-width: 0;
