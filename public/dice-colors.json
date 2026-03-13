@@ -1,0 +1,13 @@
+{
+  "default": "#b91c1c",
+  "single": "#4a4a4a",
+  "pair": "#0040ff",
+  "triple": "#01a70c",
+  "quad": "#a63aee",
+  "five": "#ff7b00",
+  "six": "#ffbb00",
+  "small-straight": "#f77de7",
+  "large-straight": "#ff00ae",
+  "full-house": "#33c2ff",
+  "six-of-a-kind": "#ffbb00"
+}

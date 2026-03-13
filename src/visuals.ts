@@ -16,8 +16,7 @@ const EDGE_COLOR = 0x1a1a1a
 const BORDER_ACCENT = 0x0f0f0f
 const INNER_FLOOR = 0x0a0a0a
 
-// Professional transparent red matte — all dice share this look
-const DICE_RED = 0xb91c1c
+// Default dice color (red) — overridable via setDiceDefaultColor
 
 // Shared grid texture for playing surface (created once)
 function createGridTexture(): THREE.CanvasTexture {
@@ -281,7 +280,7 @@ function createDiceMeshesInGroup(parent: THREE.Object3D, glossiness: number = DE
   const meshes: THREE.Object3D[] = []
   const count = Math.max(1, Math.min(50, diceCount))
   for (let i = 0; i < count; i++) {
-    const group = createDiceWithPips(DICE_RED, glossiness)
+    const group = createDiceWithPips(DICE_DEFAULT_COLOR, glossiness)
     group.castShadow = true
     group.receiveShadow = true
     parent.add(group)
@@ -415,7 +414,7 @@ export function setDiceGlossiness(diceMeshes: THREE.Object3D[], glossiness: numb
 
 /** Create a single dice model (for preview/display). */
 export function createSingleDice(glossiness: number = DEFAULT_GLOSSINESS): THREE.Group {
-  const group = createDiceWithPips(DICE_RED, glossiness)
+  const group = createDiceWithPips(DICE_DEFAULT_COLOR, glossiness)
   group.castShadow = true
   group.receiveShadow = true
   return group
@@ -426,18 +425,47 @@ function comboSlug(combo: string): string {
   return combo.toLowerCase().replace(/\s+/g, '-')
 }
 
-/** Combo colors for dice VFX (hex). Matches badge colors from styles. */
-const COMBO_COLORS: Record<string, number> = {
-  'single': 0x95a5a6,
-  'pair': 0x3498db,
-  'triple': 0x2ecc71,
-  'quad': 0x9b59b6,
-  'five': 0xf1c40f,
-  'six': 0xe74c3c,
-  'small-straight': 0x1abc9c,
-  'large-straight': 0x8e44ad,
-  'full-house': 0xe67e22,
-  'six-of-a-kind': 0xc0392b
+/** Default combo colors (hex). Used when no custom colors set. */
+const DEFAULT_COMBO_COLORS: Record<string, number> = {
+  'single': 0x94a3b8,
+  'pair': 0x0f52ba,
+  'triple': 0x10b981,
+  'quad': 0x7c3aed,
+  'five': 0xf59e0b,
+  'six': 0xdc2626,
+  'small-straight': 0x0891b2,
+  'large-straight': 0x6d28d9,
+  'full-house': 0xea580c,
+  'six-of-a-kind': 0xb91c1c
+}
+
+/** Mutable combo colors — updated by UI. */
+let COMBO_COLORS: Record<string, number> = { ...DEFAULT_COMBO_COLORS }
+let DICE_DEFAULT_COLOR = 0xb91c1c
+
+/** Set custom colors for dice combos. Pass partial object to override specific combos. */
+export function setDiceComboColors(colors: Record<string, number>): void {
+  COMBO_COLORS = { ...DEFAULT_COMBO_COLORS, ...colors }
+}
+
+/** Set default (non-combo) dice color. */
+export function setDiceDefaultColor(hex: number): void {
+  DICE_DEFAULT_COLOR = hex
+}
+
+/** Get current combo colors. */
+export function getDiceComboColors(): Record<string, number> {
+  return { ...COMBO_COLORS }
+}
+
+/** Get default dice color. */
+export function getDiceDefaultColor(): number {
+  return DICE_DEFAULT_COLOR
+}
+
+/** Get default values for reset. */
+export function getDefaultDiceColors(): { default: number; combos: Record<string, number> } {
+  return { default: 0xb91c1c, combos: { ...DEFAULT_COMBO_COLORS } }
 }
 
 /** Rarity rank: higher = rarer. Used when a die belongs to multiple groups. */
@@ -520,9 +548,8 @@ export function applyDiceComboVFX(
       const colorHex = COMBO_COLORS[slug] ?? COMBO_COLORS['single']
       mat.color.setHex(colorHex)
       mat.emissive.setHex(colorHex)
-      mat.emissiveIntensity = 0.25
     } else {
-      mat.color.setHex(DICE_RED)
+      mat.color.setHex(DICE_DEFAULT_COLOR)
       mat.emissive.setHex(0x000000)
       mat.emissiveIntensity = 0
     }
@@ -535,7 +562,7 @@ export function clearDiceComboVFX(diceMeshes: THREE.Object3D[]): void {
     const box = group.children[0]
     if (box instanceof THREE.Mesh && box.material instanceof THREE.MeshPhysicalMaterial) {
       const mat = box.material
-      mat.color.setHex(DICE_RED)
+      mat.color.setHex(DICE_DEFAULT_COLOR)
       mat.emissive.setHex(0x000000)
       mat.emissiveIntensity = 0
     }
