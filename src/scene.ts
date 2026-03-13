@@ -37,7 +37,8 @@ export function createScene(container: HTMLElement, envMap?: THREE.Texture): Sce
   const renderer = new THREE.WebGLRenderer({
     antialias: true,
     powerPreference: 'high-performance',
-    alpha: false
+    alpha: false,
+    failIfMajorPerformanceCaveat: false
   })
   renderer.setSize(container.clientWidth, container.clientHeight)
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5))
@@ -95,6 +96,14 @@ export function createScene(container: HTMLElement, envMap?: THREE.Texture): Sce
   controls.maxDistance = 200
 
   return { scene, camera, renderer, controls, lighting: { mainLight, ambientLight: ambient } }
+}
+
+/** Enable performance mode: lower shadow resolution and pixel ratio for slow browsers. */
+export function setPerformanceMode(state: SceneState, container: HTMLElement): void {
+  state.lighting.mainLight.shadow.mapSize.width = 256
+  state.lighting.mainLight.shadow.mapSize.height = 256
+  state.renderer.setPixelRatio(1)
+  state.renderer.setSize(container.clientWidth, container.clientHeight)
 }
 
 /** Set main light direction from azimuth (0–360°) and elevation (0–90°). Distance from target. */

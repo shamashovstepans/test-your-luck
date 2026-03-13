@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
-import { createScene, createDiceModelEnvironment, onResize, getCameraForAllRooms, getCameraForRoom, startCameraAnimation, updateCameraAnimation, setMainLightDirection, type CameraAnimationState, type CameraView } from './scene'
+import { createScene, createDiceModelEnvironment, onResize, setPerformanceMode, getCameraForAllRooms, getCameraForRoom, startCameraAnimation, updateCameraAnimation, setMainLightDirection, type CameraAnimationState, type CameraView } from './scene'
 import { initRapier, createPhysicsWorld, throwDice, stepPhysics, isSettled, isOutOfBounds, syncRigidBodyToMesh, updateDiceMass, setGravity, getDiceResult, getFixedStep, type PhysicsState, type ThrowOptions, type SpawnLayout, type TargetMode, type PatternPreset } from './physics'
 import { createRoomVisuals, createSingleDice, setDiceGlossiness, updateWallTransparency, applyDiceComboVFX, clearDiceComboVFX } from './visuals'
 
@@ -148,7 +148,8 @@ async function init() {
   const dicePreviewRenderer = new THREE.WebGLRenderer({
     canvas: dicePreviewCanvas,
     antialias: true,
-    powerPreference: 'high-performance'
+    powerPreference: 'high-performance',
+    failIfMajorPerformanceCaveat: false
   })
   dicePreviewRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5))
   const diceModelEnv = createDiceModelEnvironment(dicePreviewRenderer)
@@ -845,7 +846,7 @@ async function init() {
     aimEdge: true,
     autoLoop: false,
     randomPreset: false,
-    simSpeed: 1,
+    simSpeed: 3,
     diceCount: 6,
     gridSide: 2,
     maxConcurrent: 4,
@@ -1360,12 +1361,32 @@ async function init() {
 
   let lastFrameTime = performance.now()
   let accumulatedTime = 0
+  let fpsFrameCount = 0
+  let fpsMeasureStart = performance.now()
+  let fpsAutoBoostDone = false
   function animate() {
     requestAnimationFrame(animate)
     const now = performance.now()
-    const deltaSec = Math.max(0, (now - lastFrameTime) / 1000)
+    const deltaSec = Math.min(Math.max(0, (now - lastFrameTime) / 1000), 0.1)
     lastFrameTime = now
     const simSpeed = parseInt(simSpeedSlider.value, 10) || 1
+
+    // Auto-boost sim speed for slow browsers (once, after ~1s warmup)
+    if (!fpsAutoBoostDone) {
+      fpsFrameCount++
+      const elapsed = now - fpsMeasureStart
+      if (elapsed >= 1000) {
+        const avgFps = fpsFrameCount / (elapsed / 1000)
+        if (avgFps < 30 && simSpeed <= 3) {
+          const boost = Math.min(5, Math.max(3, Math.ceil(30 / avgFps)))
+          simSpeedSlider.value = String(boost)
+          document.getElementById('sim-speed-value')!.textContent = String(boost)
+          setPerformanceMode(sceneState, container)
+          showNotification('Performance mode: sim speed increased for smoother playback', 'info')
+        }
+        fpsAutoBoostDone = true
+      }
+    }
     const fixedStep = getFixedStep()
     accumulatedTime += deltaSec * simSpeed
     // Allow broad catch-up so simulation speed stays real-time in slower browsers.
