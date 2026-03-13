@@ -9,7 +9,8 @@
   <body>
     <div id="app">
       <div id="screen-tabs" class="debug-only">
-        <button id="tab-grid" class="screen-tab active">Grid</button>
+        <button id="tab-sixes" class="screen-tab active">Sixes</button>
+        <button id="tab-grid" class="screen-tab">Grid</button>
         <button id="tab-preview" class="screen-tab">Preview</button>
         <button id="tab-probability" class="screen-tab">Probability</button>
       </div>
@@ -45,6 +46,10 @@
         <div id="global-stats-panel" class="global-stats-panel" aria-hidden="true">
           <h4 class="global-stats-panel-title">Global stats</h4>
           <div id="global-stats-total" class="global-stats-total">0 throws</div>
+          <div class="global-stats-sixes-section">
+            <h5 class="global-stats-section-title">Sixes</h5>
+            <div id="global-stats-sixes" class="global-stats-sixes"></div>
+          </div>
           <div id="global-stats-combos" class="global-stats-combos"></div>
         </div>
         <div id="fullscreen-throw-list" class="fullscreen-throw-list" aria-hidden="true"></div>
@@ -53,6 +58,22 @@
         <button id="camera-view-btn" class="overlay-btn overlay-btn-camera debug-only" title="Switch to bottom view">↑</button>
         <button id="all-rooms-btn" class="overlay-btn debug-only" title="View all rooms">All rooms</button>
         <button id="back-to-grid-btn" class="overlay-btn overlay-btn-resume debug-only" title="Back to Grid" style="display: none">Back to Grid</button>
+      </div>
+      <div id="sixes-panel" class="sixes-panel debug-only" style="display: none">
+        <h4 class="chart-title">Throws with sixes</h4>
+        <div id="sixes-list" class="sixes-list"></div>
+        <div class="simulate-section">
+          <h4 class="chart-title">Fast simulation</h4>
+          <div class="simulate-controls">
+            <input type="number" id="simulate-count" min="10" max="10000" value="1000" />
+            <label class="simulate-check">
+              <input type="checkbox" id="simulate-send-api" checked />
+              Send to API
+            </label>
+            <button id="simulate-btn">Simulate</button>
+          </div>
+          <div id="simulate-status" class="simulate-status"></div>
+        </div>
       </div>
       <div id="probability-panel" class="probability-panel debug-only" style="display: none">
         <div class="probability-chart-section">

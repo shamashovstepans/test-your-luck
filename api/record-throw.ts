@@ -48,6 +48,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     await redis.incr(KEY_TOTAL)
 
+    const diceResult = body.diceResult ?? []
+    const sixCount = diceResult.filter((v) => v === 6).length
+    if (sixCount >= 1 && sixCount <= 6) {
+      await redis.incr(`dice:sixes:${sixCount}`)
+    }
+
     for (const combo of combos) {
       if (combo && typeof combo === 'string') {
         await redis.sadd(KEY_COMBOS, combo)

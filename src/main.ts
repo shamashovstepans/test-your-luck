@@ -144,7 +144,7 @@ type RoomState = {
   lastThrowTime: number
 }
 
-type ScreenMode = 'grid' | 'preview' | 'probability'
+type ScreenMode = 'sixes' | 'grid' | 'preview' | 'probability'
 
 async function init() {
   inject()
@@ -203,6 +203,7 @@ async function init() {
   const backToGridBtn = document.getElementById('back-to-grid-btn')!
   const gridZoomSlider = document.getElementById('grid-zoom') as HTMLInputElement
   const gridZoomValueEl = document.getElementById('grid-zoom-value')!
+  const tabSixes = document.getElementById('tab-sixes')!
   const tabGrid = document.getElementById('tab-grid')!
   const tabPreview = document.getElementById('tab-preview')!
   const tabProbability = document.getElementById('tab-probability')!
@@ -218,7 +219,7 @@ async function init() {
   let rooms: RoomState[] = []
   let gridSide = 2
   let lastDiceCount = 6
-  let screenMode: ScreenMode = 'grid'
+  let screenMode: ScreenMode = 'sixes'
   let cameraView: CameraView = 'top'
   let gameMode = true
   let cameraAnimation: CameraAnimationState | null = null
@@ -359,7 +360,7 @@ async function init() {
         requestAnimationFrame(() => onResize(sceneState, container))
       })
     } else {
-      setScreenMode('grid')
+      setScreenMode('sixes')
       queueThrows()
       requestAnimationFrame(() => {
         requestAnimationFrame(() => onResize(sceneState, container))
@@ -367,15 +368,29 @@ async function init() {
     }
   }
 
+  const sixesPanel = document.getElementById('sixes-panel')!
+  const sixesList = document.getElementById('sixes-list')!
+
   function setScreenMode(mode: ScreenMode) {
     screenMode = mode
+    tabSixes.classList.toggle('active', mode === 'sixes')
     tabGrid.classList.toggle('active', mode === 'grid')
     tabPreview.classList.toggle('active', mode === 'preview')
     tabProbability.classList.toggle('active', mode === 'probability')
-    canvasContainer.style.display = mode === 'probability' ? 'none' : ''
+    const showCanvas = mode === 'grid' || mode === 'preview'
+    canvasContainer.style.display = showCanvas ? '' : 'none'
+    sixesPanel.style.display = mode === 'sixes' ? 'flex' : 'none'
     probabilityPanel.style.display = mode === 'probability' ? 'flex' : 'none'
 
-    if (mode === 'grid') {
+    if (mode === 'sixes') {
+      destroyPreviewRoom()
+      rooms.forEach(r => { r.group.visible = false })
+      allRoomsBtn.style.display = 'none'
+      backToGridBtn.style.display = 'none'
+      gridThrowSection.style.display = 'none'
+      previewThrowSection.style.display = 'none'
+      renderSixesPanel()
+    } else if (mode === 'grid') {
       destroyPreviewRoom()
       rooms.forEach(r => { r.group.visible = true })
       allRoomsBtn.style.display = ''
@@ -417,6 +432,94 @@ async function init() {
       }
     }
   }
+
+  function renderSixesPanelWithData(sixes: Record<string, number>, totalThrows: number) {
+    const total = totalThrows
+    sixesList.innerHTML = ['6', '66', '666', '6666', '66666', '666666']
+      .map((label) => {
+        const count = sixes[label] ?? 0
+        const pct = total > 0 ? ((count / total) * 100).toFixed(2) : '0'
+        return `
+          <div class="sixes-row">
+            <span class="sixes-label">${label}</span>
+            <span class="sixes-count">${count.toLocaleString()}</span>
+            <span class="sixes-pct">${pct}%</span>
+          </div>
+        `
+      })
+      .join('')
+  }
+
+  function renderSixesPanel() {
+    fetch('/api/stats', { credentials: 'include' })
+      .then((r) => r.json())
+      .then((d: { sixes?: Record<string, number>; totalThrows?: number }) => {
+        const sixes = d.sixes ?? { '6': 0, '66': 0, '666': 0, '6666': 0, '66666': 0, '666666': 0 }
+        renderSixesPanelWithData(sixes, d.totalThrows ?? 0)
+      })
+      .catch(() => { sixesList.innerHTML = '<p style="color:rgba(255,255,255,0.5)">Failed to load</p>' })
+  }
+
+  const simulateCountInput = document.getElementById('simulate-count') as HTMLInputElement | null
+  const simulateSendApiCheck = document.getElementById('simulate-send-api') as HTMLInputElement | null
+  const simulateBtn = document.getElementById('simulate-btn') as HTMLButtonElement | null
+  const simulateStatus = document.getElementById('simulate-status')!
+
+  simulateBtn?.addEventListener('click', async () => {
+    const n = Math.min(10000, Math.max(10, parseInt(simulateCountInput?.value ?? '1000', 10) || 1000))
+    const sendToApi = simulateSendApiCheck?.checked ?? true
+    if (simulateBtn) simulateBtn.disabled = true
+    simulateStatus.textContent = `Running ${n} throws...`
+
+    const sixes: Record<string, number> = { '6': 0, '66': 0, '666': 0, '6666': 0, '66666': 0, '666666': 0 }
+    let totalThrows = 0
+    const throws: { diceResult: number[]; escaped: boolean; combos: string[]; score: number; balance: number }[] = []
+    let runningBalance = totalScore
+
+    for (let i = 0; i < n; i++) {
+      const diceResult = Array.from({ length: 6 }, () => Math.floor(Math.random() * 6) + 1)
+      const escaped = false
+      const breakdown = computeScoreBreakdown(diceResult)
+      const pattern = getRarityPattern(diceResult)
+      const allCombos: string[] = []
+      for (const b of breakdown.badges) allCombos.push(b.combo)
+      if (pattern && !allCombos.includes(pattern.name)) allCombos.push(pattern.name)
+      const score = computeScore(diceResult)
+      runningBalance += score
+
+      totalThrows++
+      const sixCount = diceResult.filter((v) => v === 6).length
+      if (sixCount >= 1 && sixCount <= 6) sixes[String(6).repeat(sixCount)]++
+
+      if (sendToApi) {
+        throws.push({ diceResult, escaped, combos: allCombos, score, balance: runningBalance })
+      }
+    }
+
+    if (sendToApi && throws.length > 0) {
+      const BATCH = 100
+      for (let i = 0; i < throws.length; i += BATCH) {
+        const batch = throws.slice(i, i + BATCH)
+        simulateStatus.textContent = `Sending ${Math.min(i + BATCH, throws.length)}/${throws.length}...`
+        await fetch('/api/record-throws', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ throws: batch })
+        })
+      }
+      totalScore = runningBalance
+      totalScoreEl.textContent = String(totalScore)
+      if (gameMode) updateGameOverlay()
+      fetchGlobalStats()
+    } else {
+      renderSixesPanelWithData(sixes, totalThrows)
+      simulateStatus.textContent = `Done. ${n} throws (local only)`
+    }
+
+    if (simulateBtn) simulateBtn.disabled = false
+    if (sendToApi) simulateStatus.textContent = `Done. ${n} throws sent to API.`
+  })
 
   function buildRooms() {
     const newGridSide = getGridSide()
@@ -766,6 +869,9 @@ async function init() {
     }
     updateHistoryStats()
 
+    updateLocalStats(entry)
+    if (isLocalBuild) applyLocalStats()
+
     // Report to global analytics (Vercel + shared stats)
     const allCombos: string[] = []
     if (!entry.escaped && entry.diceResult.length > 0) {
@@ -848,6 +954,10 @@ async function init() {
     updateGameOverlay()
     seenPatterns.clear()
     updateHistoryStats()
+    localStats.totalThrows = 0
+    localStats.sixes = { '6': 0, '66': 0, '666': 0, '6666': 0, '66666': 0, '666666': 0 }
+    localStats.combos = {}
+    if (isLocalBuild) applyLocalStats()
     fetch('/api/balance', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -858,7 +968,54 @@ async function init() {
 
   const globalStatsEl = document.getElementById('global-stats-text')!
   const globalStatsTotalEl = document.getElementById('global-stats-total')!
+  const globalStatsSixesEl = document.getElementById('global-stats-sixes')!
   const globalStatsCombosEl = document.getElementById('global-stats-combos')!
+
+  const isLocalBuild = typeof location !== 'undefined' && (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+  const localStats = {
+    totalThrows: 0,
+    sixes: { '6': 0, '66': 0, '666': 0, '6666': 0, '66666': 0, '666666': 0 } as Record<string, number>,
+    combos: {} as Record<string, number>
+  }
+
+  function updateLocalStats(entry: HistoryEntry) {
+    localStats.totalThrows++
+    if (!entry.escaped && entry.diceResult.length > 0) {
+      const sixCount = entry.diceResult.filter((v) => v === 6).length
+      if (sixCount >= 1 && sixCount <= 6) {
+        const key = String(6).repeat(sixCount)
+        localStats.sixes[key] = (localStats.sixes[key] ?? 0) + 1
+      }
+      const breakdown = computeScoreBreakdown(entry.diceResult)
+      const pattern = getRarityPattern(entry.diceResult)
+      for (const b of breakdown.badges) {
+        localStats.combos[b.combo] = (localStats.combos[b.combo] ?? 0) + 1
+      }
+      if (pattern) localStats.combos[pattern.name] = (localStats.combos[pattern.name] ?? 0) + 1
+    }
+  }
+
+  function applyLocalStats() {
+    const { totalThrows, sixes, combos } = localStats
+    const uniqueCombos = Object.keys(combos).length
+    globalStatsEl.textContent = `${totalThrows.toLocaleString()} throws · ${uniqueCombos} combos`
+    globalStatsTotalEl.textContent = `${totalThrows.toLocaleString()} throws`
+    renderGlobalStatsSixes(sixes, totalThrows)
+    renderGlobalStatsPanel(totalThrows, combos)
+    renderSixesPanelWithData(sixes, totalThrows)
+  }
+
+  function renderGlobalStatsSixes(sixes: Record<string, number>, totalThrows: number) {
+    const labels = ['6', '66', '666', '6666', '66666', '666666']
+    const total = totalThrows
+    globalStatsSixesEl.innerHTML = labels
+      .map((label) => {
+        const count = sixes[label] ?? 0
+        const pct = total > 0 ? ((count / total) * 100).toFixed(2) : '0'
+        return `<div class="global-stats-sixes-row"><span class="global-stats-sixes-label">${label}</span><span class="global-stats-sixes-count">${count.toLocaleString()}</span><span class="global-stats-sixes-pct">${pct}%</span></div>`
+      })
+      .join('')
+  }
 
   const renderGlobalStatsPanel = (totalThrows: number, combos: Record<string, number>) => {
     globalStatsTotalEl.textContent = `${totalThrows.toLocaleString()} throws`
@@ -866,11 +1023,12 @@ async function init() {
       globalStatsCombosEl.innerHTML = '<span style="color:rgba(255,255,255,0.4);font-size:12px">No data yet</span>'
       return
     }
+    const sorted = [...RARITY_PATTERNS].sort((a, b) => b.count - a.count) // common → rare
     const maxVal = Math.max(
-      ...RARITY_PATTERNS.map((p) => Math.max(combos[p.name] ?? 0, (p.count / TOTAL_OUTCOMES) * totalThrows)),
+      ...sorted.map((p) => Math.max(combos[p.name] ?? 0, (p.count / TOTAL_OUTCOMES) * totalThrows)),
       1
     )
-    globalStatsCombosEl.innerHTML = RARITY_PATTERNS.map((p) => {
+    globalStatsCombosEl.innerHTML = sorted.map((p) => {
       const observed = combos[p.name] ?? 0
       const expected = (p.count / TOTAL_OUTCOMES) * totalThrows
       const observedPct = (observed / maxVal) * 100
@@ -895,21 +1053,32 @@ async function init() {
   const fetchGlobalStats = () => {
     fetch('/api/stats', { credentials: 'include' })
       .then((r) => r.json())
-      .then((d: { totalThrows?: number; uniqueCombos?: number; combos?: Record<string, number> }) => {
+      .then((d: { totalThrows?: number; uniqueCombos?: number; combos?: Record<string, number>; sixes?: Record<string, number> }) => {
         const total = d.totalThrows ?? 0
         const uniqueCombos = d.uniqueCombos ?? 0
         const comboCounts = d.combos ?? {}
+        const sixes = d.sixes ?? { '6': 0, '66': 0, '666': 0, '6666': 0, '66666': 0, '666666': 0 }
         globalStatsEl.textContent = `${total.toLocaleString()} throws · ${uniqueCombos} combos`
+        renderGlobalStatsSixes(sixes, total)
         renderGlobalStatsPanel(total, comboCounts)
+        if (screenMode === 'sixes') renderSixesPanel()
       })
       .catch(() => {
-        globalStatsEl.textContent = '— throws · — combos'
-        globalStatsTotalEl.textContent = '—'
-        globalStatsCombosEl.innerHTML = ''
+        if (localStats.totalThrows > 0) applyLocalStats()
+        else {
+          globalStatsEl.textContent = '— throws · — combos'
+          globalStatsTotalEl.textContent = '—'
+          globalStatsSixesEl.innerHTML = ''
+          globalStatsCombosEl.innerHTML = ''
+        }
       })
   }
-  fetchGlobalStats()
-  setInterval(fetchGlobalStats, 30_000)
+  if (isLocalBuild) {
+    applyLocalStats()
+  } else {
+    fetchGlobalStats()
+    setInterval(fetchGlobalStats, 30_000)
+  }
 
   const powerSlider = document.getElementById('throw-power') as HTMLInputElement
   const powerValue = document.getElementById('power-value')!
@@ -1221,6 +1390,7 @@ async function init() {
     }
   })
 
+  tabSixes.addEventListener('click', () => setScreenMode('sixes'))
   tabGrid.addEventListener('click', () => setScreenMode('grid'))
   tabPreview.addEventListener('click', () => setScreenMode('preview'))
   tabProbability.addEventListener('click', () => setScreenMode('probability'))
