@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev:vercel": "vercel dev --local",
+    "recalculate-stats": "curl -X POST \"https://test-your-luck-fixyfzdrf-shamashovstepans-projects.vercel.app/api/recalculate-stats\"",
     "build": "tsc -b && vite build",
     "preview": "vite preview"
   },
