@@ -1218,6 +1218,24 @@ body {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  position: relative;
+}
+
+.global-stats-row[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  margin-bottom: 4px;
+  padding: 6px 8px;
+  font-size: 11px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.9);
+  border-radius: 6px;
+  white-space: nowrap;
+  z-index: 100;
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .global-stats-row-header {

@@ -1093,9 +1093,13 @@ async function init() {
       const observedPctReal = totalThrows > 0 ? (observed / totalThrows) * 100 : 0
       const expectedPctReal = (p.count / TOTAL_OUTCOMES) * 100
       const leader = comboLeaders?.[p.name]
-      const tooltip = leader ? `Most: ${leader.name} (${leader.count.toLocaleString()} throws)` : ''
+      const tooltip = leader
+        ? `Most: ${leader.name} (${leader.count.toLocaleString()} throws)`
+        : observed > 0
+          ? `${p.name}: ${observed.toLocaleString()} observed`
+          : ''
       return `
-        <div class="global-stats-row" title="${escapeHtml(tooltip)}">
+        <div class="global-stats-row" ${tooltip ? `data-tooltip="${escapeHtml(tooltip)}"` : ''}>
           <div class="global-stats-row-header">
             <span class="global-stats-row-name">${p.name}</span>
             <span class="global-stats-row-counts">${observed} (${observedPctReal.toFixed(2)}%) · exp ${expectedPctReal.toFixed(2)}%</span>
@@ -1113,10 +1117,10 @@ async function init() {
     fetch('/api/stats', { credentials: 'include' })
       .then((r) => r.json())
       .then((d: { totalThrows?: number; uniqueCombos?: number; combos?: Record<string, number>; sixes?: Record<string, number>; comboLeaders?: Record<string, { name: string; count: number }> }) => {
-        const total = d.totalThrows ?? 0
-        const uniqueCombos = d.uniqueCombos ?? 0
-        const comboCounts = d.combos ?? {}
-        const sixes = d.sixes ?? { '6': 0, '66': 0, '666': 0, '6666': 0, '66666': 0, '666666': 0 }
+        const total = isLocalBuild && localStats.totalThrows > 0 ? localStats.totalThrows : (d.totalThrows ?? 0)
+        const comboCounts = isLocalBuild && localStats.totalThrows > 0 ? localStats.combos : (d.combos ?? {})
+        const sixes = isLocalBuild && localStats.totalThrows > 0 ? localStats.sixes : (d.sixes ?? { '6': 0, '66': 0, '666': 0, '6666': 0, '66666': 0, '666666': 0 })
+        const uniqueCombos = Object.keys(comboCounts).length
         const comboLeaders = d.comboLeaders ?? {}
         cachedComboLeaders = comboLeaders
         globalStatsEl.textContent = `${total.toLocaleString()} throws · ${uniqueCombos} combos`
@@ -1138,14 +1142,11 @@ async function init() {
       })
   }
   fetchUserName()
-  if (isLocalBuild) {
-    applyLocalStats()
-  } else {
-    fetchGlobalStats()
-    fetchLeaderboard()
-    setInterval(fetchGlobalStats, 30_000)
-    setInterval(fetchLeaderboard, 30_000)
-  }
+  fetchGlobalStats()
+  fetchLeaderboard()
+  setInterval(fetchGlobalStats, 30_000)
+  setInterval(fetchLeaderboard, 30_000)
+  if (isLocalBuild) applyLocalStats()
 
   const powerSlider = document.getElementById('throw-power') as HTMLInputElement
   const powerValue = document.getElementById('power-value')!

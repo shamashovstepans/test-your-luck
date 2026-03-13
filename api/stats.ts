@@ -29,7 +29,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     if (!redis) {
-      const empty = { totalThrows: 0, uniqueCombos: 0, combos: {} as Record<string, number>, sixes: { '6': 0, '66': 0, '666': 0, '6666': 0, '66666': 0, '666666': 0 } }
+      const empty = { totalThrows: 0, uniqueCombos: 0, combos: {} as Record<string, number>, sixes: { '6': 0, '66': 0, '666': 0, '6666': 0, '66666': 0, '666666': 0 }, comboLeaders: {} as Record<string, { name: string; count: number }> }
       return res.status(200).json(
         debug ? { ...empty, redisConnected: false } : empty
       )
@@ -56,10 +56,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const topUserIds: string[] = []
     const topCounts: number[] = []
     for (const raw of comboLeadersRaw ?? []) {
-      const arr = (raw ?? []) as unknown[]
-      if (arr.length >= 2) {
-        topUserIds.push(String(arr[0]))
-        topCounts.push(Math.round(Number(arr[1]) || 0))
+      const arr = Array.isArray(raw) ? raw : []
+      const member = arr[0]
+      const score = arr[1]
+      if (member != null && (score != null || score === 0)) {
+        topUserIds.push(String(member))
+        topCounts.push(Math.round(Number(score) || 0))
       } else {
         topUserIds.push('')
         topCounts.push(0)
