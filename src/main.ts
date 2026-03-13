@@ -750,7 +750,10 @@ async function init() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ diceResult: entry.diceResult, escaped: entry.escaped, combo: comboName })
-    }).catch(() => {})
+    })
+      .then((r) => r.json())
+      .then((d: { stored?: boolean }) => { if (d.stored) fetchGlobalStats() })
+      .catch(() => {})
 
     const idx = history.length
     const timeStr = new Date(entry.time).toLocaleTimeString()

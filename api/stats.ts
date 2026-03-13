@@ -1,11 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { Redis } from '@upstash/redis'
 
-const redis = process.env.UPSTASH_REDIS_REST_URL
-  ? new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL!,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-    })
+const redisUrl = process.env.UPSTASH_REDIS_REST_URL ?? process.env.KV_REST_API_URL
+const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN
+const redis = redisUrl && redisToken
+  ? new Redis({ url: redisUrl, token: redisToken })
   : null
 
 const KEY_TOTAL = 'dice:total_throws'
@@ -19,20 +18,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   res.setHeader('Cache-Control', 's-maxage=10, stale-while-revalidate=30')
 
+  const debug = ['1', 'true'].includes(String(req.query?.debug ?? '').toLowerCase())
+
   try {
     if (!redis) {
-      return res.status(200).json({ totalThrows: 0, uniqueCombos: 0 })
+      return res.status(200).json(
+        debug
+          ? { totalThrows: 0, uniqueCombos: 0, redisConnected: false }
+          : { totalThrows: 0, uniqueCombos: 0 }
+      )
     }
 
     const [total, combos] = await Promise.all([
-      redis.get<number>(KEY_TOTAL) ?? 0,
-      redis.scard(KEY_COMBOS) ?? 0,
+      redis.get(KEY_TOTAL),
+      redis.scard(KEY_COMBOS),
     ])
 
-    return res.status(200).json({
-      totalThrows: typeof total === 'number' ? total : 0,
-      uniqueCombos: combos,
-    })
+    const totalThrows = Math.max(0, Number(total) || 0)
+    const uniqueCombos = Math.max(0, Number(combos) || 0)
+
+    return res.status(200).json(
+      debug
+        ? { totalThrows, uniqueCombos, redisConnected: true }
+        : { totalThrows, uniqueCombos }
+    )
   } catch (err) {
     console.error('stats error:', err)
     return res.status(500).json({ error: 'Failed to fetch stats' })
