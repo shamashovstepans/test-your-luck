@@ -41,6 +41,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const combos: Record<string, number> = {}
     const uniqueCombos = new Set<string>()
     const userThrows: Record<string, number> = {}
+    const userComboCounts: Record<string, Record<string, number>> = {}
 
     for (const key of historyKeys) {
       const userId = key.replace(/^dice:user:(.+):history$/, '$1')
@@ -63,6 +64,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             if (c) {
               combos[c] = (combos[c] ?? 0) + 1
               uniqueCombos.add(c)
+              if (userId) {
+                if (!userComboCounts[userId]) userComboCounts[userId] = {}
+                userComboCounts[userId][c] = (userComboCounts[userId][c] ?? 0) + 1
+              }
             }
           }
         } catch {
@@ -98,8 +103,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (count > 0) pipeline.zadd(KEY_LEADERBOARD, { score: count, member: uid })
     }
 
+    for (const [comboName, _] of Object.entries(combos)) {
+      pipeline.del(`dice:combo:${comboName}:users`)
+    }
+    for (const [uid, comboCounts] of Object.entries(userComboCounts)) {
+      for (const [comboName, count] of Object.entries(comboCounts)) {
+        if (count > 0) pipeline.zadd(`dice:combo:${comboName}:users`, { score: count, member: uid })
+      }
+    }
+
     await pipeline.exec()
 
+    const comboLeadersCount = Object.values(userComboCounts).reduce((sum, m) => sum + Object.keys(m).length, 0)
     return res.status(200).json({
       ok: true,
       totalThrows,
@@ -112,7 +127,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         '666666': sixes[6]
       },
       uniqueCombos: uniqueCombos.size,
-      usersProcessed: historyKeys.length
+      usersProcessed: historyKeys.length,
+      comboLeaderEntriesRebuilt: comboLeadersCount
     })
   } catch (err) {
     console.error('recalculate-stats error:', err)

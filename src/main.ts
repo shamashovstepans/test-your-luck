@@ -666,6 +666,7 @@ async function init() {
   }
 
   let patternFilter: string | null = null
+  let cachedComboLeaders: Record<string, { name: string; count: number }> = {}
 
   function applyHistoryFilter() {
     historyList.querySelectorAll('.history-entry').forEach((el) => {
@@ -756,7 +757,10 @@ async function init() {
       const pctSim = total > 0 ? (simProb * 100).toFixed(2) : '0'
       const rarity = Math.round(TOTAL_OUTCOMES / p.count)
       const isActive = patternFilter === p.name
+      const leader = cachedComboLeaders[p.name]
+      const leaderTitle = leader ? `Most: ${leader.name} (${leader.count.toLocaleString()} throws)` : ''
       svgPattern += `<g class="pattern-bar" data-pattern="${p.name}" style="cursor:pointer">`
+      if (leaderTitle) svgPattern += `<title>${escapeHtml(leaderTitle)}</title>`
       svgPattern += `<rect x="${pad.l}" y="${y}" width="${plotW}" height="${barH}" fill="transparent"/>`
       svgPattern += `<rect x="${pad.l}" y="${y}" width="${wTheo}" height="${barH}" fill="#9b59b6" opacity="${isActive ? 1 : 0.7}" rx="2"/>`
       if (total > 0 && wSim > 0) {
@@ -1070,7 +1074,7 @@ async function init() {
       .join('')
   }
 
-  const renderGlobalStatsPanel = (totalThrows: number, combos: Record<string, number>) => {
+  const renderGlobalStatsPanel = (totalThrows: number, combos: Record<string, number>, comboLeaders?: Record<string, { name: string; count: number }>) => {
     globalStatsTotalEl.textContent = `${totalThrows.toLocaleString()} throws`
     if (totalThrows === 0) {
       globalStatsCombosEl.innerHTML = '<span style="color:rgba(255,255,255,0.4);font-size:12px">No data yet</span>'
@@ -1088,8 +1092,10 @@ async function init() {
       const expectedPct = (expected / maxVal) * 100
       const observedPctReal = totalThrows > 0 ? (observed / totalThrows) * 100 : 0
       const expectedPctReal = (p.count / TOTAL_OUTCOMES) * 100
+      const leader = comboLeaders?.[p.name]
+      const tooltip = leader ? `Most: ${leader.name} (${leader.count.toLocaleString()} throws)` : ''
       return `
-        <div class="global-stats-row">
+        <div class="global-stats-row" title="${escapeHtml(tooltip)}">
           <div class="global-stats-row-header">
             <span class="global-stats-row-name">${p.name}</span>
             <span class="global-stats-row-counts">${observed} (${observedPctReal.toFixed(2)}%) · exp ${expectedPctReal.toFixed(2)}%</span>
@@ -1106,16 +1112,19 @@ async function init() {
   const fetchGlobalStats = () => {
     fetch('/api/stats', { credentials: 'include' })
       .then((r) => r.json())
-      .then((d: { totalThrows?: number; uniqueCombos?: number; combos?: Record<string, number>; sixes?: Record<string, number> }) => {
+      .then((d: { totalThrows?: number; uniqueCombos?: number; combos?: Record<string, number>; sixes?: Record<string, number>; comboLeaders?: Record<string, { name: string; count: number }> }) => {
         const total = d.totalThrows ?? 0
         const uniqueCombos = d.uniqueCombos ?? 0
         const comboCounts = d.combos ?? {}
         const sixes = d.sixes ?? { '6': 0, '66': 0, '666': 0, '6666': 0, '66666': 0, '666666': 0 }
+        const comboLeaders = d.comboLeaders ?? {}
+        cachedComboLeaders = comboLeaders
         globalStatsEl.textContent = `${total.toLocaleString()} throws · ${uniqueCombos} combos`
         renderGlobalStatsSixes(sixes, total)
-        renderGlobalStatsPanel(total, comboCounts)
+        renderGlobalStatsPanel(total, comboCounts, comboLeaders)
         fetchLeaderboard()
         if (screenMode === 'sixes') renderSixesPanel()
+        if (screenMode === 'probability') renderProbabilityChart()
       })
       .catch(() => {
         if (localStats.totalThrows > 0) applyLocalStats()

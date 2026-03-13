@@ -71,6 +71,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (combo && typeof combo === 'string') {
           pipeline.sadd(KEY_COMBOS, combo)
           pipeline.incr(`dice:combo:${combo}`)
+          if (userId != null) pipeline.zincrby(`dice:combo:${combo}:users`, 1, userId)
         }
       }
 

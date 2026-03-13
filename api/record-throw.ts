@@ -58,6 +58,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (combo && typeof combo === 'string') {
         await redis.sadd(KEY_COMBOS, combo)
         await redis.incr(`dice:combo:${combo}`)
+        if (userId) await redis.zincrby(`dice:combo:${combo}:users`, 1, userId)
       }
     }
 

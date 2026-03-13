@@ -38,9 +38,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const total = await redis.get(KEY_TOTAL)
     const totalThrows = Math.max(0, Number(total) || 0)
 
-    const [comboCounts, sixCounts] = await Promise.all([
+    const [comboCounts, sixCounts, comboLeadersRaw] = await Promise.all([
       Promise.all(COMBO_NAMES.map((name) => redis.get(`dice:combo:${name}`))),
-      Promise.all([1, 2, 3, 4, 5, 6].map((n) => redis.get(`dice:sixes:${n}`)))
+      Promise.all([1, 2, 3, 4, 5, 6].map((n) => redis.get(`dice:sixes:${n}`))),
+      Promise.all(COMBO_NAMES.map((name) => redis.zrange(`dice:combo:${name}:users`, 0, 0, { rev: true, withScores: true })))
     ])
     const combos: Record<string, number> = {}
     COMBO_NAMES.forEach((name, i) => {
@@ -52,10 +53,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     })
     const uniqueCombos = Object.values(combos).filter((c) => c > 0).length
 
+    const topUserIds: string[] = []
+    const topCounts: number[] = []
+    for (const raw of comboLeadersRaw ?? []) {
+      const arr = (raw ?? []) as unknown[]
+      if (arr.length >= 2) {
+        topUserIds.push(String(arr[0]))
+        topCounts.push(Math.round(Number(arr[1]) || 0))
+      } else {
+        topUserIds.push('')
+        topCounts.push(0)
+      }
+    }
+    const names = topUserIds.length > 0
+      ? await redis.mget<string>(...topUserIds.filter(Boolean).map((id) => `dice:user:${id}:name`))
+      : []
+    const nameMap = new Map<string, string>()
+    let nameIdx = 0
+    for (const uid of topUserIds) {
+      if (uid) {
+        const n = names[nameIdx++] ?? null
+        nameMap.set(uid, (n && typeof n === 'string' ? n.trim() : '') || uid.slice(0, 6))
+      }
+    }
+    const comboLeaders: Record<string, { name: string; count: number }> = {}
+    COMBO_NAMES.forEach((name, i) => {
+      const uid = topUserIds[i]
+      const count = topCounts[i] ?? 0
+      if (uid && count > 0) {
+        comboLeaders[name] = { name: nameMap.get(uid) ?? uid.slice(0, 6), count }
+      }
+    })
+
     return res.status(200).json(
       debug
-        ? { totalThrows, uniqueCombos, combos, sixes, redisConnected: true }
-        : { totalThrows, uniqueCombos, combos, sixes }
+        ? { totalThrows, uniqueCombos, combos, sixes, comboLeaders, redisConnected: true }
+        : { totalThrows, uniqueCombos, combos, sixes, comboLeaders }
     )
   } catch (err) {
     console.error('stats error:', err)
