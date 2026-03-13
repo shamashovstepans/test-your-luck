@@ -1648,9 +1648,22 @@ async function init() {
   recalculateStatsBtn.addEventListener('click', async () => {
     recalculateStatsBtn.disabled = true
     recalculateStatsStatus.textContent = 'Running…'
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 90_000)
     try {
-      const r = await fetch('/api/recalculate-stats', { method: 'POST', credentials: 'include' })
-      const d = await r.json()
+      const r = await fetch('/api/recalculate-stats', {
+        method: 'POST',
+        credentials: 'include',
+        signal: controller.signal
+      })
+      clearTimeout(timeoutId)
+      let d: { ok?: boolean; totalThrows?: number; error?: string }
+      try {
+        d = await r.json()
+      } catch {
+        recalculateStatsStatus.textContent = r.ok ? 'Invalid response' : `Error ${r.status}`
+        return
+      }
       if (d.ok) {
         recalculateStatsStatus.textContent = `Done: ${d.totalThrows} throws`
         fetchGlobalStats()
@@ -1658,10 +1671,12 @@ async function init() {
         recalculateStatsStatus.textContent = d.error ?? 'Failed'
       }
     } catch (err) {
-      recalculateStatsStatus.textContent = 'Error'
+      clearTimeout(timeoutId)
+      recalculateStatsStatus.textContent =
+        err instanceof Error && err.name === 'AbortError' ? 'Timed out (90s)' : 'Network error'
     } finally {
       recalculateStatsBtn.disabled = false
-      setTimeout(() => { recalculateStatsStatus.textContent = '' }, 3000)
+      setTimeout(() => { recalculateStatsStatus.textContent = '' }, 5000)
     }
   })
 

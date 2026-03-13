@@ -2,5 +2,10 @@
   "framework": "vite",
   "installCommand": "npm install",
   "buildCommand": "npm run build",
-  "devCommand": "npm run dev"
+  "devCommand": "npm run dev",
+  "functions": {
+    "api/recalculate-stats.ts": {
+      "maxDuration": 60
+    }
+  }
 }
