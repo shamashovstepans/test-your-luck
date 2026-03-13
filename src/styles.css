@@ -706,6 +706,14 @@ body {
   color: rgba(255, 255, 255, 0.7);
 }
 
+.global-stats {
+  padding: 6px 14px 10px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-variant-numeric: tabular-nums;
+}
+
 #history-list {
   flex: 1;
   overflow-y: auto;

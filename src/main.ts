@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import { inject, track } from '@vercel/analytics'
 import { createScene, createDiceModelEnvironment, onResize, setPerformanceMode, getCameraForAllRooms, getCameraForRoom, startCameraAnimation, updateCameraAnimation, setMainLightDirection, type CameraAnimationState, type CameraView } from './scene'
 import { initRapier, createPhysicsWorld, throwDice, stepPhysics, isSettled, isOutOfBounds, syncRigidBodyToMesh, updateDiceMass, setGravity, getDiceResult, getFixedStep, type PhysicsState, type ThrowOptions, type SpawnLayout, type TargetMode, type PatternPreset } from './physics'
 import { createRoomVisuals, createSingleDice, setDiceGlossiness, updateWallTransparency, applyDiceComboVFX, clearDiceComboVFX } from './visuals'
@@ -136,6 +137,7 @@ type RoomState = {
 type ScreenMode = 'grid' | 'preview' | 'probability'
 
 async function init() {
+  inject()
   await initRapier()
   const app = document.getElementById('app')!
   const container = document.getElementById('canvas-container')!
@@ -740,6 +742,16 @@ async function init() {
       showNotification(`First time: ${pattern.name}${rarityStr}`, 'pattern', { patternName: pattern.name, entry })
     }
     updateHistoryStats()
+
+    // Report to global analytics (Vercel + shared stats)
+    const comboName = pattern?.name ?? null
+    track('Dice Throw', { escaped: !!entry.escaped, combo: comboName ?? 'none', score: entry.score })
+    fetch('/api/record-throw', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ diceResult: entry.diceResult, escaped: entry.escaped, combo: comboName })
+    }).catch(() => {})
+
     const idx = history.length
     const timeStr = new Date(entry.time).toLocaleTimeString()
     const roomBadge = `<span class="history-room">#${entry.roomIndex + 1}</span>`
@@ -793,6 +805,20 @@ async function init() {
     seenPatterns.clear()
     updateHistoryStats()
   })
+
+  const globalStatsEl = document.getElementById('global-stats-text')!
+  const fetchGlobalStats = () => {
+    fetch('/api/stats')
+      .then((r) => r.json())
+      .then((d: { totalThrows?: number; uniqueCombos?: number }) => {
+        const total = d.totalThrows ?? 0
+        const combos = d.uniqueCombos ?? 0
+        globalStatsEl.textContent = `${total.toLocaleString()} throws · ${combos} combos`
+      })
+      .catch(() => { globalStatsEl.textContent = '— throws · — combos' })
+  }
+  fetchGlobalStats()
+  setInterval(fetchGlobalStats, 30_000)
 
   const powerSlider = document.getElementById('throw-power') as HTMLInputElement
   const powerValue = document.getElementById('power-value')!
