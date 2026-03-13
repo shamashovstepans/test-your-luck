@@ -1643,7 +1643,7 @@ async function init() {
     }
   })
 
-  const recalculateStatsBtn = document.getElementById('recalculate-stats-btn')!
+  const recalculateStatsBtn = document.getElementById('recalculate-stats-btn') as HTMLButtonElement
   const recalculateStatsStatus = document.getElementById('recalculate-stats-status')!
   recalculateStatsBtn.addEventListener('click', async () => {
     recalculateStatsBtn.disabled = true
