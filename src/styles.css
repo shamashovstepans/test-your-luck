@@ -4,10 +4,17 @@
   box-sizing: border-box;
 }
 
+html {
+  height: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   font-family: system-ui, -apple-system, sans-serif;
   overflow: hidden;
   background: #1a1a2e;
+  min-height: 100%;
+  min-height: 100dvh;
 }
 
 #app {
@@ -1326,4 +1333,98 @@ body {
 
 .game-btn:active {
   transform: translateX(-50%) scale(0.98);
+}
+
+/* Mobile vertical layout */
+@media (max-width: 600px), (max-height: 500px) {
+  #app.game-mode .fullscreen-balance-widget {
+    top: max(12px, env(safe-area-inset-top));
+    left: max(12px, env(safe-area-inset-left));
+    padding: 8px 12px;
+    gap: 6px;
+  }
+
+  .fullscreen-balance-widget .fullscreen-widget-label {
+    font-size: 10px;
+  }
+
+  .fullscreen-balance-widget .fullscreen-widget-value {
+    font-size: 16px;
+  }
+
+  .fullscreen-throw-list {
+    top: max(56px, calc(env(safe-area-inset-top) + 44px));
+    left: max(12px, env(safe-area-inset-left));
+    width: min(200px, 55vw);
+    bottom: max(80px, calc(env(safe-area-inset-bottom) + 72px));
+    gap: 6px;
+  }
+
+  .fullscreen-throw-item {
+    padding: 8px 10px;
+  }
+
+  .fullscreen-throw-score {
+    font-size: 14px;
+  }
+
+  .fullscreen-throw-badge {
+    font-size: 9px;
+    padding: 2px 6px;
+  }
+
+  .global-stats-panel {
+    top: max(12px, env(safe-area-inset-top));
+    right: max(12px, env(safe-area-inset-right));
+    width: min(200px, 55vw);
+    max-height: calc(100vh - 100px);
+    padding: 10px 12px;
+    font-size: 11px;
+  }
+
+  .global-stats-panel-title {
+    font-size: 10px;
+  }
+
+  .global-stats-total {
+    font-size: 14px;
+    margin-bottom: 8px;
+  }
+
+  .global-stats-name-input,
+  .global-stats-name-save {
+    padding: 8px 10px;
+    font-size: 14px; /* prevent zoom on focus */
+  }
+
+  .global-stats-section-title {
+    font-size: 10px;
+  }
+
+  .global-stats-sixes-row,
+  .global-stats-leaderboard-row {
+    font-size: 11px;
+  }
+
+  .global-stats-row-header {
+    font-size: 10px;
+  }
+
+  .global-stats-row-header .global-stats-row-counts {
+    font-size: 9px;
+  }
+
+  #app.game-mode .game-btn {
+    bottom: max(24px, env(safe-area-inset-bottom));
+    padding: 14px 28px;
+    min-height: 48px;
+    font-size: 16px;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  .global-stats-panel {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
 }
