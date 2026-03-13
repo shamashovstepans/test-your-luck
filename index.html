@@ -19,6 +19,13 @@
           <h3 class="section-title">Balance</h3>
           <span id="total-score" class="balance-value">0</span>
         </div>
+        <details class="global-stats-section" id="global-stats-section">
+          <summary>Global stats</summary>
+          <div id="global-stats-content" class="global-stats-content">
+            <div class="global-stats-total">Total throws: <span id="global-total-throws">—</span></div>
+            <div id="global-stats-combinations" class="global-stats-combinations"></div>
+          </div>
+        </details>
         <details class="scoring-guide" id="scoring-guide">
           <summary>How scoring works</summary>
           <div class="scoring-guide-list">
@@ -41,6 +48,10 @@
         <div id="fullscreen-balance-widget" class="fullscreen-balance-widget" aria-hidden="true">
           <span class="fullscreen-widget-label">Balance</span>
           <span id="fullscreen-balance" class="fullscreen-widget-value">0</span>
+        </div>
+        <div id="global-stats-widget" class="global-stats-widget" aria-hidden="true">
+          <span class="global-stats-widget-label">Total throws</span>
+          <span id="global-stats-total-value" class="global-stats-widget-value">—</span>
         </div>
         <div id="fullscreen-throw-list" class="fullscreen-throw-list" aria-hidden="true"></div>
         <button id="test-luck-btn" class="game-btn" title="Throw dice (Space). Press ` to show debug">Test luck</button>

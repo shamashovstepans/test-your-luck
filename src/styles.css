@@ -348,6 +348,73 @@ body {
   color: #4ecdc4;
 }
 
+.global-stats-section {
+  font-size: 11px;
+  margin-bottom: 12px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
+}
+
+.global-stats-section summary {
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 600;
+}
+
+.global-stats-content {
+  margin-top: 8px;
+}
+
+.global-stats-total {
+  color: rgba(255, 255, 255, 0.8);
+  font-variant-numeric: tabular-nums;
+}
+
+.global-stats-combinations {
+  margin-top: 6px;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.6);
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.global-stats-combinations .combo-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 2px 0;
+}
+
+.global-stats-widget {
+  display: none;
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  z-index: 10;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  pointer-events: none;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.global-stats-widget .global-stats-widget-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.global-stats-widget .global-stats-widget-value {
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #9b59b6;
+}
+
 .fullscreen-widget-label {
   font-size: 12px;
   font-weight: 600;
@@ -922,6 +989,11 @@ body {
 /* Game mode: show balance widget and throw list */
 #app.game-mode .fullscreen-balance-widget,
 #canvas-container:fullscreen .fullscreen-balance-widget {
+  display: flex;
+}
+
+#app.game-mode .global-stats-widget,
+#canvas-container:fullscreen .global-stats-widget {
   display: flex;
 }
 
