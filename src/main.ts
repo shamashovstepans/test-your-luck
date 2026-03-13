@@ -1140,8 +1140,8 @@ async function init() {
     spawnLayout: 'grid' as SpawnLayout,
     targetMode: 'single' as TargetMode,
     patternPreset: 'none' as PatternPreset,
-    cameraPosition: { x: -13.82, y: 0.1, z: 13.79 } as CameraPreset,
-    cameraTarget: { x: -4.42, y: -6.35, z: 3.91 } as CameraPreset
+    cameraPosition: { x: -6.35, y: 17.82, z: 0.24 } as CameraPreset,
+    cameraTarget: { x: -2.61, y: -2.58, z: 0.25 } as CameraPreset
   }
 
   const loadDefaults = (): typeof HARDCODED_DEFAULTS => {
