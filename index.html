@@ -101,6 +101,26 @@
       <div id="controls" class="debug-only">
         <div class="controls-section dice-preview-section">
           <h3 class="section-title">Dice model</h3>
+          <details class="dice-colors-section" id="dice-colors-details">
+            <summary>Dice colors</summary>
+            <div class="dice-colors-grid">
+              <label class="dice-color-control"><span>Default</span><input type="color" id="dice-color-default" value="#b91c1c" /></label>
+              <label class="dice-color-control"><span>Single</span><input type="color" id="dice-color-single" value="#94a3b8" /></label>
+              <label class="dice-color-control"><span>Pair</span><input type="color" id="dice-color-pair" value="#0f52ba" /></label>
+              <label class="dice-color-control"><span>Triple</span><input type="color" id="dice-color-triple" value="#10b981" /></label>
+              <label class="dice-color-control"><span>Quad</span><input type="color" id="dice-color-quad" value="#7c3aed" /></label>
+              <label class="dice-color-control"><span>Five</span><input type="color" id="dice-color-five" value="#f59e0b" /></label>
+              <label class="dice-color-control"><span>Six</span><input type="color" id="dice-color-six" value="#dc2626" /></label>
+              <label class="dice-color-control"><span>Small straight</span><input type="color" id="dice-color-small-straight" value="#0891b2" /></label>
+              <label class="dice-color-control"><span>Large straight</span><input type="color" id="dice-color-large-straight" value="#6d28d9" /></label>
+              <label class="dice-color-control"><span>Full house</span><input type="color" id="dice-color-full-house" value="#ea580c" /></label>
+              <label class="dice-color-control"><span>Six of a kind</span><input type="color" id="dice-color-six-of-a-kind" value="#b91c1c" /></label>
+            </div>
+            <div class="dice-colors-actions">
+              <button type="button" id="dice-colors-reset" class="dice-colors-reset">Reset</button>
+              <button type="button" id="dice-colors-save-project" class="dice-colors-reset" title="Download dice-colors.json to save in public/ folder">Save to project</button>
+            </div>
+          </details>
           <label class="slider-control">
             <span class="slider-label">Glossiness</span>
             <input type="range" id="glossiness" min="0" max="1" step="0.05" value="0.88" />
