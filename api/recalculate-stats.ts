@@ -10,6 +10,7 @@ const redis = redisUrl && redisToken
 
 const KEY_TOTAL = 'dice:total_throws'
 const KEY_COMBOS = 'dice:unique_combos'
+const KEY_LEADERBOARD = 'dice:leaderboard:throws'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -39,9 +40,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const sixes: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 }
     const combos: Record<string, number> = {}
     const uniqueCombos = new Set<string>()
+    const userThrows: Record<string, number> = {}
 
     for (const key of historyKeys) {
+      const userId = key.replace(/^dice:user:(.+):history$/, '$1')
       const rawList = await redis.lrange(key, 0, -1)
+      const count = (rawList ?? []).length
+      if (userId && count > 0) userThrows[userId] = (userThrows[userId] ?? 0) + count
       for (const s of rawList ?? []) {
         try {
           const o = JSON.parse(s as string) as { d?: number[]; e?: boolean }
@@ -86,6 +91,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     for (const c of uniqueCombos) pipeline.sadd(KEY_COMBOS, c)
     for (const [name, count] of Object.entries(combos)) {
       pipeline.set(`dice:combo:${name}`, count)
+    }
+
+    pipeline.del(KEY_LEADERBOARD)
+    for (const [uid, count] of Object.entries(userThrows)) {
+      if (count > 0) pipeline.zadd(KEY_LEADERBOARD, { score: count, member: uid })
     }
 
     await pipeline.exec()

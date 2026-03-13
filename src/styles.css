@@ -1081,6 +1081,90 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+.global-stats-name-section {
+  margin-bottom: 12px;
+}
+
+.global-stats-name-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+
+.global-stats-name-row {
+  display: flex;
+  gap: 6px;
+}
+
+.global-stats-name-input {
+  flex: 1;
+  padding: 6px 8px;
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  color: #fff;
+}
+
+.global-stats-name-input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.global-stats-name-save {
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #4ecdc4;
+  color: #000;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.global-stats-name-save:hover {
+  background: #5dd9d0;
+}
+
+.global-stats-leaderboard-section {
+  margin-bottom: 12px;
+}
+
+.global-stats-leaderboard {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 11px;
+}
+
+.global-stats-leaderboard-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.global-stats-leaderboard-rank {
+  width: 20px;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.global-stats-leaderboard-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.global-stats-leaderboard-throws {
+  font-variant-numeric: tabular-nums;
+  color: #4ecdc4;
+}
+
 .global-stats-sixes-section {
   margin-bottom: 12px;
 }

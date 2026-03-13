@@ -77,6 +77,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (userId != null) {
         balance += score
         pipeline.incr(`dice:user:${userId}:throw_count`)
+        pipeline.zincrby('dice:leaderboard:throws', 1, userId)
       }
     }
 

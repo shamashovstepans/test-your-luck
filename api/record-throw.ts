@@ -66,6 +66,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         await redis.set(`dice:user:${userId}:balance`, balance)
       }
       await redis.incr(`dice:user:${userId}:throw_count`)
+      await redis.zincrby('dice:leaderboard:throws', 1, userId)
 
       const throwRecord = JSON.stringify({
         d: body.diceResult ?? [],

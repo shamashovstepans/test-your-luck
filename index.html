@@ -44,7 +44,18 @@
         </div>
         <div id="global-stats-panel" class="global-stats-panel" aria-hidden="true">
           <h4 class="global-stats-panel-title">Global stats</h4>
+          <div class="global-stats-name-section">
+            <label class="global-stats-name-label">Name</label>
+            <div class="global-stats-name-row">
+              <input type="text" id="user-name-input" class="global-stats-name-input" maxlength="32" placeholder="Your name" />
+              <button id="user-name-save" class="global-stats-name-save">Save</button>
+            </div>
+          </div>
           <div id="global-stats-total" class="global-stats-total">0 throws</div>
+          <div class="global-stats-leaderboard-section">
+            <h5 class="global-stats-section-title">Most throws</h5>
+            <div id="global-stats-leaderboard" class="global-stats-leaderboard"></div>
+          </div>
           <div class="global-stats-sixes-section">
             <h5 class="global-stats-section-title">Sixes</h5>
             <div id="global-stats-sixes" class="global-stats-sixes"></div>

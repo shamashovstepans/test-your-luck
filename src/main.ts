@@ -963,8 +963,11 @@ async function init() {
 
   const globalStatsEl = document.getElementById('global-stats-text')!
   const globalStatsTotalEl = document.getElementById('global-stats-total')!
+  const globalStatsLeaderboardEl = document.getElementById('global-stats-leaderboard')!
   const globalStatsSixesEl = document.getElementById('global-stats-sixes')!
   const globalStatsCombosEl = document.getElementById('global-stats-combos')!
+  const userNameInput = document.getElementById('user-name-input') as HTMLInputElement | null
+  const userNameSaveBtn = document.getElementById('user-name-save') as HTMLButtonElement | null
 
   const isLocalBuild = typeof location !== 'undefined' && (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
   const localStats = {
@@ -999,6 +1002,61 @@ async function init() {
     renderGlobalStatsPanel(totalThrows, combos)
     renderSixesPanelWithData(sixes, totalThrows)
   }
+
+  function renderGlobalStatsLeaderboard(leaderboard: { rank: number; name: string; throws: number }[]) {
+    if (leaderboard.length === 0) {
+      globalStatsLeaderboardEl.innerHTML = '<span style="color:rgba(255,255,255,0.4);font-size:11px">No data yet</span>'
+      return
+    }
+    globalStatsLeaderboardEl.innerHTML = leaderboard
+      .map(
+        (e) =>
+          `<div class="global-stats-leaderboard-row"><span class="global-stats-leaderboard-rank">${e.rank}</span><span class="global-stats-leaderboard-name">${escapeHtml(e.name)}</span><span class="global-stats-leaderboard-throws">${e.throws.toLocaleString()}</span></div>`
+      )
+      .join('')
+  }
+
+  function escapeHtml(s: string): string {
+    const div = document.createElement('div')
+    div.textContent = s
+    return div.innerHTML
+  }
+
+  function fetchLeaderboard() {
+    if (isLocalBuild) return
+    fetch('/api/leaderboard?limit=10', { credentials: 'include' })
+      .then((r) => r.json())
+      .then((d: { leaderboard?: { rank: number; name: string; throws: number }[] }) => {
+        renderGlobalStatsLeaderboard(d.leaderboard ?? [])
+      })
+      .catch(() => { globalStatsLeaderboardEl.innerHTML = '' })
+  }
+
+  function fetchUserName() {
+    if (isLocalBuild || !userNameInput) return
+    fetch('/api/name', { credentials: 'include' })
+      .then((r) => r.json())
+      .then((d: { name?: string; display?: string }) => {
+        if (userNameInput) userNameInput.value = d.name ?? ''
+      })
+      .catch(() => {})
+  }
+
+  function saveUserName() {
+    if (isLocalBuild || !userNameInput || !userNameSaveBtn) return
+    const name = userNameInput.value.trim().slice(0, 32)
+    userNameSaveBtn.disabled = true
+    fetch('/api/name', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ name })
+    })
+      .then(() => { userNameSaveBtn!.disabled = false })
+      .catch(() => { userNameSaveBtn!.disabled = false })
+  }
+
+  userNameSaveBtn?.addEventListener('click', saveUserName)
 
   function renderGlobalStatsSixes(sixes: Record<string, number>, totalThrows: number) {
     const labels = ['6', '66', '666', '6666', '66666', '666666']
@@ -1056,6 +1114,7 @@ async function init() {
         globalStatsEl.textContent = `${total.toLocaleString()} throws · ${uniqueCombos} combos`
         renderGlobalStatsSixes(sixes, total)
         renderGlobalStatsPanel(total, comboCounts)
+        fetchLeaderboard()
         if (screenMode === 'sixes') renderSixesPanel()
       })
       .catch(() => {
@@ -1063,16 +1122,20 @@ async function init() {
         else {
           globalStatsEl.textContent = '— throws · — combos'
           globalStatsTotalEl.textContent = '—'
+          globalStatsLeaderboardEl.innerHTML = ''
           globalStatsSixesEl.innerHTML = ''
           globalStatsCombosEl.innerHTML = ''
         }
       })
   }
+  fetchUserName()
   if (isLocalBuild) {
     applyLocalStats()
   } else {
     fetchGlobalStats()
+    fetchLeaderboard()
     setInterval(fetchGlobalStats, 30_000)
+    setInterval(fetchLeaderboard, 30_000)
   }
 
   const powerSlider = document.getElementById('throw-power') as HTMLInputElement
