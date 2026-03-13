@@ -938,6 +938,103 @@ body {
   display: flex;
 }
 
+/* Global stats panel: top-right in game mode */
+.global-stats-panel {
+  display: none;
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  width: 280px;
+  max-height: calc(100vh - 48px);
+  z-index: 10;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(12px);
+  overflow-y: auto;
+  pointer-events: auto;
+}
+
+#app.game-mode .global-stats-panel,
+#canvas-container:fullscreen .global-stats-panel {
+  display: block;
+}
+
+.global-stats-panel-title {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.global-stats-total {
+  font-size: 16px;
+  font-weight: 700;
+  color: #4ecdc4;
+  margin-bottom: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.global-stats-combos {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.global-stats-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.global-stats-row-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.global-stats-row-name {
+  font-weight: 500;
+}
+
+.global-stats-row-counts {
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.global-stats-bar-track {
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  position: relative;
+}
+
+.global-stats-bar-expected {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: rgba(241, 196, 15, 0.35);
+  border-radius: 4px 0 0 4px;
+  min-width: 2px;
+  transition: width 0.2s ease;
+}
+
+.global-stats-bar-observed {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, #4ecdc4, #44a08d);
+  border-radius: 4px 0 0 4px;
+  min-width: 2px;
+  transition: width 0.2s ease;
+}
+
 /* Debug mode: ensure tabs and side panels are visible */
 #app:not(.game-mode) #screen-tabs {
   display: flex !important;

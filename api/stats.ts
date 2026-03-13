@@ -10,6 +10,11 @@ const redis = redisUrl && redisToken
 const KEY_TOTAL = 'dice:total_throws'
 const KEY_COMBOS = 'dice:unique_combos'
 
+const COMBO_NAMES = [
+  'Six of a kind', 'Five of a kind', 'Four + pair', 'Four of a kind', 'Full house',
+  'Three + pair', 'Three of a kind', 'Three pairs', 'Two pairs', 'One pair', 'Straight'
+]
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET')
@@ -22,25 +27,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     if (!redis) {
+      const empty = { totalThrows: 0, uniqueCombos: 0, combos: {} as Record<string, number> }
       return res.status(200).json(
-        debug
-          ? { totalThrows: 0, uniqueCombos: 0, redisConnected: false }
-          : { totalThrows: 0, uniqueCombos: 0 }
+        debug ? { ...empty, redisConnected: false } : empty
       )
     }
 
-    const [total, combos] = await Promise.all([
-      redis.get(KEY_TOTAL),
-      redis.scard(KEY_COMBOS),
-    ])
-
+    const total = await redis.get(KEY_TOTAL)
     const totalThrows = Math.max(0, Number(total) || 0)
-    const uniqueCombos = Math.max(0, Number(combos) || 0)
+
+    const comboCounts = await Promise.all(
+      COMBO_NAMES.map((name) => redis.get(`dice:combo:${name}`))
+    )
+    const combos: Record<string, number> = {}
+    COMBO_NAMES.forEach((name, i) => {
+      combos[name] = Math.max(0, Number(comboCounts[i]) || 0)
+    })
+    const uniqueCombos = Object.values(combos).filter((c) => c > 0).length
 
     return res.status(200).json(
       debug
-        ? { totalThrows, uniqueCombos, redisConnected: true }
-        : { totalThrows, uniqueCombos }
+        ? { totalThrows, uniqueCombos, combos, redisConnected: true }
+        : { totalThrows, uniqueCombos, combos }
     )
   } catch (err) {
     console.error('stats error:', err)

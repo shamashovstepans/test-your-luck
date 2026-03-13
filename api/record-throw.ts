@@ -29,6 +29,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (!escaped && combo) {
       await redis.sadd(KEY_COMBOS, combo)
+      await redis.incr(`dice:combo:${combo}`)
     }
 
     return res.status(200).json({ ok: true, stored: true })

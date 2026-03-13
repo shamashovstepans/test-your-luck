@@ -323,12 +323,14 @@ async function init() {
 
   const fullscreenBalanceWidget = document.getElementById('fullscreen-balance-widget')!
   const fullscreenThrowList = document.getElementById('fullscreen-throw-list')!
+  const globalStatsPanel = document.getElementById('global-stats-panel')!
 
   function setGameMode(enabled: boolean) {
     gameMode = enabled
     app.classList.toggle('game-mode', gameMode)
     fullscreenBalanceWidget.ariaHidden = enabled ? 'false' : 'true'
     fullscreenThrowList.ariaHidden = enabled ? 'false' : 'true'
+    globalStatsPanel.ariaHidden = enabled ? 'false' : 'true'
     if (gameMode) {
       setScreenMode('preview')
       updateGameOverlay()
@@ -810,15 +812,56 @@ async function init() {
   })
 
   const globalStatsEl = document.getElementById('global-stats-text')!
+  const globalStatsTotalEl = document.getElementById('global-stats-total')!
+  const globalStatsCombosEl = document.getElementById('global-stats-combos')!
+
+  const renderGlobalStatsPanel = (totalThrows: number, combos: Record<string, number>) => {
+    globalStatsTotalEl.textContent = `${totalThrows.toLocaleString()} throws`
+    if (totalThrows === 0) {
+      globalStatsCombosEl.innerHTML = '<span style="color:rgba(255,255,255,0.4);font-size:12px">No data yet</span>'
+      return
+    }
+    const maxVal = Math.max(
+      ...RARITY_PATTERNS.map((p) => Math.max(combos[p.name] ?? 0, (p.count / TOTAL_OUTCOMES) * totalThrows)),
+      1
+    )
+    globalStatsCombosEl.innerHTML = RARITY_PATTERNS.map((p) => {
+      const observed = combos[p.name] ?? 0
+      const expected = (p.count / TOTAL_OUTCOMES) * totalThrows
+      const observedPct = (observed / maxVal) * 100
+      const expectedPct = (expected / maxVal) * 100
+      const observedPctReal = totalThrows > 0 ? (observed / totalThrows) * 100 : 0
+      const expectedPctReal = (p.count / TOTAL_OUTCOMES) * 100
+      return `
+        <div class="global-stats-row">
+          <div class="global-stats-row-header">
+            <span class="global-stats-row-name">${p.name}</span>
+            <span class="global-stats-row-counts">${observed} (${observedPctReal.toFixed(2)}%) · exp ${expectedPctReal.toFixed(2)}%</span>
+          </div>
+          <div class="global-stats-bar-track">
+            <div class="global-stats-bar-expected" style="width:${expectedPct}%"></div>
+            <div class="global-stats-bar-observed" style="width:${observedPct}%"></div>
+          </div>
+        </div>
+      `
+    }).join('')
+  }
+
   const fetchGlobalStats = () => {
     fetch('/api/stats')
       .then((r) => r.json())
-      .then((d: { totalThrows?: number; uniqueCombos?: number }) => {
+      .then((d: { totalThrows?: number; uniqueCombos?: number; combos?: Record<string, number> }) => {
         const total = d.totalThrows ?? 0
-        const combos = d.uniqueCombos ?? 0
-        globalStatsEl.textContent = `${total.toLocaleString()} throws · ${combos} combos`
+        const uniqueCombos = d.uniqueCombos ?? 0
+        const comboCounts = d.combos ?? {}
+        globalStatsEl.textContent = `${total.toLocaleString()} throws · ${uniqueCombos} combos`
+        renderGlobalStatsPanel(total, comboCounts)
       })
-      .catch(() => { globalStatsEl.textContent = '— throws · — combos' })
+      .catch(() => {
+        globalStatsEl.textContent = '— throws · — combos'
+        globalStatsTotalEl.textContent = '—'
+        globalStatsCombosEl.innerHTML = ''
+      })
   }
   fetchGlobalStats()
   setInterval(fetchGlobalStats, 30_000)
