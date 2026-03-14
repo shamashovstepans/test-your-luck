@@ -9,6 +9,20 @@ html {
   -webkit-text-size-adjust: 100%;
 }
 
+/* iPhone simulation: add ?device=iphone to URL for mobile testing */
+html.device-sim-iphone body {
+  max-width: 390px;
+  max-height: 844px;
+  min-height: 844px;
+  margin: auto;
+  box-shadow: 0 0 0 2px rgba(0,0,0,0.1);
+  border-radius: 40px;
+  overflow: hidden;
+}
+html.device-sim-iphone #app {
+  border-radius: 40px;
+}
+
 body {
   font-family: system-ui, -apple-system, sans-serif;
   overflow: hidden;
@@ -20,6 +34,7 @@ body {
 #app {
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   position: relative;
@@ -497,6 +512,66 @@ body {
   display: none;
 }
 
+/* Mobile toggle buttons - visible only on small screens */
+.mobile-toggle-btn {
+  display: none;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.mobile-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.mobile-expand-btn {
+  display: none;
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 11;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.mobile-expand-btn:hover {
+  background: rgba(0, 0, 0, 0.75);
+}
+
+.global-stats-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.global-stats-panel-header .global-stats-panel-title {
+  margin: 0;
+}
+
 /* Balance widget: persistent, top-left, always visible in game mode */
 .fullscreen-balance-widget {
   display: none;
@@ -511,6 +586,10 @@ body {
   pointer-events: none;
   align-items: baseline;
   gap: 8px;
+}
+
+.fullscreen-balance-widget .mobile-toggle-btn {
+  pointer-events: auto;
 }
 
 .fullscreen-balance-widget .fullscreen-widget-label {
@@ -1085,6 +1164,7 @@ body {
   left: 0;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: row;
 }
@@ -1407,11 +1487,42 @@ body {
 
 /* Mobile vertical layout */
 @media (max-width: 600px), (max-height: 500px) {
+  .mobile-toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
   #app.game-mode .fullscreen-balance-widget {
     top: max(12px, env(safe-area-inset-top));
     left: max(12px, env(safe-area-inset-left));
     padding: 8px 12px;
     gap: 6px;
+    pointer-events: auto;
+  }
+
+  /* Balance: minimized = compact pill (label hidden, value + toggle visible) */
+  .fullscreen-balance-widget[data-mobile-state="minimized"] .fullscreen-widget-label {
+    display: none;
+  }
+
+  .fullscreen-balance-widget[data-mobile-state="minimized"] {
+    padding: 6px 10px;
+  }
+
+  .fullscreen-balance-widget[data-mobile-state="minimized"] .fullscreen-widget-value {
+    font-size: 14px;
+  }
+
+  .fullscreen-balance-widget[data-mobile-state="minimized"] .mobile-toggle-btn {
+    width: 20px;
+    height: 20px;
+    font-size: 14px;
+  }
+
+  /* Balance: hidden */
+  .fullscreen-balance-widget[data-mobile-state="hidden"] {
+    display: none !important;
   }
 
   .fullscreen-balance-widget .fullscreen-widget-label {
@@ -1422,12 +1533,25 @@ body {
     font-size: 16px;
   }
 
+  /* Expand button: shown via JS when balance or stats is hidden (to restore UI) */
+  #canvas-container.mobile-expand-visible #mobile-expand-btn {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Throw list: hide when balance hidden */
   .fullscreen-throw-list {
     top: max(56px, calc(env(safe-area-inset-top) + 44px));
     left: max(12px, env(safe-area-inset-left));
     width: min(200px, 55vw);
     bottom: max(80px, calc(env(safe-area-inset-bottom) + 72px));
     gap: 6px;
+  }
+
+  /* Hide throw list only when balance is fully hidden */
+  .mobile-balance-hidden .fullscreen-throw-list {
+    display: none !important;
   }
 
   .fullscreen-throw-item {
@@ -1441,6 +1565,11 @@ body {
   .fullscreen-throw-badge {
     font-size: 9px;
     padding: 2px 6px;
+  }
+
+  /* Stats: hidden */
+  .global-stats-panel[data-mobile-state="hidden"] {
+    display: none !important;
   }
 
   .global-stats-panel {
@@ -1484,13 +1613,22 @@ body {
     font-size: 9px;
   }
 
+  /* Smaller throw button when stats/balance collapsed or hidden */
   #app.game-mode .game-btn {
-    bottom: max(24px, env(safe-area-inset-bottom));
+    bottom: max(20px, calc(env(safe-area-inset-bottom) + 12px));
     padding: 14px 28px;
     min-height: 48px;
     font-size: 16px;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
+  }
+
+  .mobile-ui-collapsed #app.game-mode .game-btn {
+    bottom: max(16px, calc(env(safe-area-inset-bottom) + 10px));
+    padding: 10px 20px;
+    min-height: 44px;
+    font-size: 14px;
+    border-radius: 10px;
   }
 
   .global-stats-panel {

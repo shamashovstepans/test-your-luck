@@ -7,6 +7,15 @@
     <link rel="stylesheet" href="/src/styles.css" />
   </head>
   <body>
+    <!-- iPhone simulation: add ?device=iphone to URL to test mobile layout -->
+    <script>
+      (function() {
+        const params = new URLSearchParams(location.search);
+        if (params.get('device') === 'iphone' || params.get('simulate') === 'iphone') {
+          document.documentElement.classList.add('device-sim-iphone');
+        }
+      })();
+    </script>
     <div id="app" class="game-mode">
       <div id="screen-tabs" class="debug-only">
         <button id="tab-sixes" class="screen-tab active">Sixes</button>
@@ -38,12 +47,16 @@
       </div>
       <div id="main-area">
       <div id="canvas-container">
-        <div id="fullscreen-balance-widget" class="fullscreen-balance-widget" aria-hidden="true">
+        <div id="fullscreen-balance-widget" class="fullscreen-balance-widget" aria-hidden="true" data-mobile-state="full">
           <span class="fullscreen-widget-label">Balance</span>
           <span id="fullscreen-balance" class="fullscreen-widget-value">0</span>
+          <button type="button" id="balance-toggle-btn" class="mobile-toggle-btn" aria-label="Minimize balance" title="Minimize balance">−</button>
         </div>
-        <div id="global-stats-panel" class="global-stats-panel" aria-hidden="true">
-          <h4 class="global-stats-panel-title">Global stats</h4>
+        <div id="global-stats-panel" class="global-stats-panel" aria-hidden="true" data-mobile-state="full">
+          <div class="global-stats-panel-header">
+            <h4 class="global-stats-panel-title">Global stats</h4>
+            <button type="button" id="stats-toggle-btn" class="mobile-toggle-btn" aria-label="Minimize stats" title="Minimize stats">−</button>
+          </div>
           <div class="global-stats-name-section">
             <label class="global-stats-name-label">Name</label>
             <div class="global-stats-name-row">
@@ -63,6 +76,7 @@
           <div id="global-stats-combos" class="global-stats-combos"></div>
         </div>
         <div id="fullscreen-throw-list" class="fullscreen-throw-list" aria-hidden="true"></div>
+        <button id="mobile-expand-btn" class="mobile-expand-btn" aria-label="Show stats and balance" title="Show stats and balance" style="display: none">⋯</button>
         <button id="test-luck-btn" class="game-btn" title="Throw dice (Space). Press ` to show debug">Test luck</button>
         <button id="fullscreen-btn" class="overlay-btn overlay-btn-fullscreen debug-only" title="Full screen (F)" aria-label="Full screen">⛶</button>
         <button id="camera-view-btn" class="overlay-btn overlay-btn-camera debug-only" title="Switch to bottom view">↑</button>

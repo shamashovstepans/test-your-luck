@@ -334,6 +334,74 @@ async function init() {
   const fullscreenBalanceWidget = document.getElementById('fullscreen-balance-widget')!
   const fullscreenThrowList = document.getElementById('fullscreen-throw-list')!
   const globalStatsPanel = document.getElementById('global-stats-panel')!
+  const balanceToggleBtn = document.getElementById('balance-toggle-btn')!
+  const statsToggleBtn = document.getElementById('stats-toggle-btn')!
+  const mobileExpandBtn = document.getElementById('mobile-expand-btn')!
+
+  const MOBILE_LAYOUT_KEY = 'dice-mobile-layout'
+  type MobileLayoutState = { balance: 'full' | 'minimized' | 'hidden'; stats: 'full' | 'hidden' }
+
+  function getMobileLayoutState(): MobileLayoutState {
+    try {
+      const s = localStorage.getItem(MOBILE_LAYOUT_KEY)
+      if (s) {
+        const parsed = JSON.parse(s) as MobileLayoutState
+        if (parsed.balance && parsed.stats) return parsed
+      }
+    } catch (_) {}
+    return { balance: 'full', stats: 'full' }
+  }
+
+  function setMobileLayoutState(state: MobileLayoutState) {
+    try {
+      localStorage.setItem(MOBILE_LAYOUT_KEY, JSON.stringify(state))
+    } catch (_) {}
+  }
+
+  function applyMobileLayoutState(state: MobileLayoutState) {
+    fullscreenBalanceWidget.dataset.mobileState = state.balance
+    globalStatsPanel.dataset.mobileState = state.stats
+    const collapsed = state.balance !== 'full' || state.stats !== 'full'
+    const anyHidden = state.balance === 'hidden' || state.stats === 'hidden'
+    canvasContainer.classList.toggle('mobile-ui-collapsed', collapsed)
+    canvasContainer.classList.toggle('mobile-balance-hidden', state.balance === 'hidden')
+    canvasContainer.classList.toggle('mobile-expand-visible', anyHidden)
+    balanceToggleBtn.setAttribute('aria-label', state.balance === 'full' ? 'Minimize balance' : state.balance === 'minimized' ? 'Hide balance' : 'Show balance')
+    balanceToggleBtn.setAttribute('title', state.balance === 'full' ? 'Minimize balance' : state.balance === 'minimized' ? 'Hide balance' : 'Show balance')
+    balanceToggleBtn.textContent = state.balance === 'hidden' ? '+' : '−'
+    statsToggleBtn.setAttribute('aria-label', state.stats === 'full' ? 'Hide stats' : 'Show stats')
+    statsToggleBtn.setAttribute('title', state.stats === 'full' ? 'Hide stats' : 'Show stats')
+    statsToggleBtn.textContent = state.stats === 'full' ? '−' : '+'
+  }
+
+  function initMobileLayout() {
+    const state = getMobileLayoutState()
+    applyMobileLayoutState(state)
+  }
+
+  balanceToggleBtn.addEventListener('click', (e) => {
+    e.stopPropagation()
+    const state = getMobileLayoutState()
+    if (state.balance === 'full') state.balance = 'minimized'
+    else if (state.balance === 'minimized') state.balance = 'hidden'
+    else state.balance = 'full'
+    setMobileLayoutState(state)
+    applyMobileLayoutState(state)
+  })
+
+  statsToggleBtn.addEventListener('click', (e) => {
+    e.stopPropagation()
+    const state = getMobileLayoutState()
+    state.stats = state.stats === 'full' ? 'hidden' : 'full'
+    setMobileLayoutState(state)
+    applyMobileLayoutState(state)
+  })
+
+  mobileExpandBtn.addEventListener('click', () => {
+    const state: MobileLayoutState = { balance: 'full', stats: 'full' }
+    setMobileLayoutState(state)
+    applyMobileLayoutState(state)
+  })
 
   function setGameMode(enabled: boolean) {
     gameMode = enabled
@@ -1795,7 +1863,7 @@ async function init() {
     recalculateStatsBtn.disabled = true
     recalculateStatsStatus.textContent = 'Running…'
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 90_000)
+    const timeoutId = setTimeout(() => controller.abort(), 330_000)
     try {
       const r = await fetch('/api/recalculate-stats', {
         method: 'POST',
@@ -1819,7 +1887,7 @@ async function init() {
     } catch (err) {
       clearTimeout(timeoutId)
       recalculateStatsStatus.textContent =
-        err instanceof Error && err.name === 'AbortError' ? 'Timed out (90s)' : 'Network error'
+        err instanceof Error && err.name === 'AbortError' ? 'Timed out (5.5 min)' : 'Network error'
     } finally {
       recalculateStatsBtn.disabled = false
       setTimeout(() => { recalculateStatsStatus.textContent = '' }, 5000)
@@ -1893,6 +1961,7 @@ async function init() {
 
   applyDefaults()
   setGameMode(true)
+  initMobileLayout()
   if (!gameMode) {
     queueThrows()
   }
