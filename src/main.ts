@@ -4,6 +4,7 @@ import { inject, track } from '@vercel/analytics'
 import { createScene, createDiceModelEnvironment, onResize, setPerformanceMode, getCameraForAllRooms, getCameraForRoom, startCameraAnimation, updateCameraAnimation, setMainLightDirection, type CameraAnimationState, type CameraView } from './scene'
 import { initRapier, createPhysicsWorld, throwDice, stepPhysics, isSettled, isOutOfBounds, syncRigidBodyToMesh, updateDiceMass, setGravity, getDiceResult, getFixedStep, type PhysicsState, type ThrowOptions, type SpawnLayout, type TargetMode, type PatternPreset } from './physics'
 import { createRoomVisuals, createSingleDice, setDiceGlossiness, updateWallTransparency, applyDiceComboVFX, clearDiceComboVFX } from './visuals'
+import { hapticsThrow, hapticsSettle, hapticsCombo } from './haptics'
 
 const SETTLE_THRESHOLD = 0.01
 const USER_ID_COOKIE = 'dice_user_id'
@@ -833,6 +834,13 @@ async function init() {
   }
 
   function addHistoryEntry(entry: HistoryEntry) {
+    if (!entry.escaped) {
+      const breakdown = computeScoreBreakdown(entry.diceResult)
+      if (breakdown.rarityTier >= 3) hapticsCombo()
+      else hapticsSettle()
+    } else {
+      hapticsSettle()
+    }
     history.push(entry)
     totalScore += entry.score
     totalScoreEl.textContent = String(totalScore)
@@ -1492,7 +1500,10 @@ async function init() {
     }
   }
 
-  document.getElementById('grid-throw-btn')!.addEventListener('click', queueThrows)
+  document.getElementById('grid-throw-btn')!.addEventListener('click', () => {
+    hapticsThrow()
+    queueThrows()
+  })
 
   const fullscreenBtn = document.getElementById('fullscreen-btn')!
   fullscreenBtn.addEventListener('click', () => {
@@ -1554,6 +1565,7 @@ async function init() {
     if (e.code === 'Space') {
       if (inInput) return
       e.preventDefault()
+      hapticsThrow()
       if (screenMode === 'grid') {
         queueThrows()
       } else if (screenMode === 'preview') {
@@ -1570,6 +1582,7 @@ async function init() {
   })
 
   document.getElementById('test-luck-btn')!.addEventListener('click', () => {
+    hapticsThrow()
     if (screenMode === 'preview') {
       ensurePreviewRoom()
       clearDiceComboVFX(previewDiceMeshes)
@@ -1585,6 +1598,7 @@ async function init() {
   })
 
   document.getElementById('preview-throw-btn')!.addEventListener('click', () => {
+    hapticsThrow()
     ensurePreviewRoom()
     clearDiceComboVFX(previewDiceMeshes)
     const opts = getThrowOptions({ seed: Date.now() })
