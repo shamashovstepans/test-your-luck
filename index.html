@@ -7,6 +7,15 @@
     <link rel="stylesheet" href="/src/styles.css" />
   </head>
   <body>
+    <!-- iPhone simulation: add ?device=iphone to URL to test mobile layout -->
+    <script>
+      (function() {
+        const params = new URLSearchParams(location.search);
+        if (params.get('device') === 'iphone' || params.get('simulate') === 'iphone') {
+          document.documentElement.classList.add('device-sim-iphone');
+        }
+      })();
+    </script>
     <div id="app" class="game-mode">
       <div id="screen-tabs" class="debug-only">
         <button id="tab-sixes" class="screen-tab active">Sixes</button>

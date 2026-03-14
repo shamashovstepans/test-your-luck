@@ -9,6 +9,20 @@ html {
   -webkit-text-size-adjust: 100%;
 }
 
+/* iPhone simulation: add ?device=iphone to URL for mobile testing */
+html.device-sim-iphone body {
+  max-width: 390px;
+  max-height: 844px;
+  min-height: 844px;
+  margin: auto;
+  box-shadow: 0 0 0 2px rgba(0,0,0,0.1);
+  border-radius: 40px;
+  overflow: hidden;
+}
+html.device-sim-iphone #app {
+  border-radius: 40px;
+}
+
 body {
   font-family: system-ui, -apple-system, sans-serif;
   overflow: hidden;
@@ -20,6 +34,7 @@ body {
 #app {
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   position: relative;
@@ -1085,6 +1100,7 @@ body {
   left: 0;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: row;
 }
@@ -1535,7 +1551,7 @@ body {
 
   /* Smaller throw button when stats/balance collapsed or hidden */
   #app.game-mode .game-btn {
-    bottom: max(24px, env(safe-area-inset-bottom));
+    bottom: max(20px, calc(env(safe-area-inset-bottom) + 12px));
     padding: 14px 28px;
     min-height: 48px;
     font-size: 16px;
@@ -1544,6 +1560,7 @@ body {
   }
 
   .mobile-ui-collapsed #app.game-mode .game-btn {
+    bottom: max(16px, calc(env(safe-area-inset-bottom) + 10px));
     padding: 10px 20px;
     min-height: 44px;
     font-size: 14px;
