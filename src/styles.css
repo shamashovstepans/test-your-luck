@@ -1677,32 +1677,32 @@ body {
     overscroll-behavior: contain;
   }
 
-  /* Achievements: smaller cells, scale down for iOS (emojis render larger on mobile) */
+  /* Achievements: aggressive scale for iOS (emojis render much larger on mobile) */
   .achievement-group-grid {
     grid-template-columns: repeat(8, 1fr);
-    gap: 4px;
+    gap: 3px;
   }
 
   .achievement-cell {
-    font-size: 16px;
+    font-size: 12px;
   }
 
   .achievement-cell-icon {
-    transform: scale(0.55);
+    transform: scale(0.32);
     transform-origin: center;
   }
 
   .achievement-cell[data-count="3"] .achievement-cell-icon {
-    font-size: 0.7em;
+    font-size: 0.65em;
   }
   .achievement-cell[data-count="4"] .achievement-cell-icon {
-    font-size: 0.6em;
-  }
-  .achievement-cell[data-count="5"] .achievement-cell-icon {
     font-size: 0.55em;
   }
-  .achievement-cell[data-count="6"] .achievement-cell-icon {
+  .achievement-cell[data-count="5"] .achievement-cell-icon {
     font-size: 0.5em;
+  }
+  .achievement-cell[data-count="6"] .achievement-cell-icon {
+    font-size: 0.45em;
   }
 }
 
@@ -1968,19 +1968,19 @@ body {
   /* Achievements: even smaller on very narrow (e.g. iPhone SE) */
   .achievement-group-grid {
     grid-template-columns: repeat(8, 1fr);
-    gap: 3px;
+    gap: 2px;
   }
 
   .achievement-cell {
-    font-size: 14px;
+    font-size: 10px;
   }
 
   .achievement-cell-icon {
-    transform: scale(0.45);
+    transform: scale(0.26);
   }
 
-  .achievement-cell[data-count="3"] .achievement-cell-icon { font-size: 0.65em; }
-  .achievement-cell[data-count="4"] .achievement-cell-icon { font-size: 0.55em; }
-  .achievement-cell[data-count="5"] .achievement-cell-icon { font-size: 0.5em; }
-  .achievement-cell[data-count="6"] .achievement-cell-icon { font-size: 0.45em; }
+  .achievement-cell[data-count="3"] .achievement-cell-icon { font-size: 0.6em; }
+  .achievement-cell[data-count="4"] .achievement-cell-icon { font-size: 0.5em; }
+  .achievement-cell[data-count="5"] .achievement-cell-icon { font-size: 0.45em; }
+  .achievement-cell[data-count="6"] .achievement-cell-icon { font-size: 0.4em; }
 }
