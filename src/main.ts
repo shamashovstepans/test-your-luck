@@ -4,6 +4,17 @@ import { inject, track } from '@vercel/analytics'
 import { createScene, createDiceModelEnvironment, onResize, setPerformanceMode, getCameraForAllRooms, getCameraForRoom, startCameraAnimation, updateCameraAnimation, setMainLightDirection, type CameraAnimationState, type CameraView } from './scene'
 import { initRapier, createPhysicsWorld, throwDice, stepPhysics, isSettled, isOutOfBounds, syncRigidBodyToMesh, updateDiceMass, setGravity, getDiceResult, getFixedStep, type PhysicsState, type ThrowOptions, type SpawnLayout, type TargetMode, type PatternPreset } from './physics'
 import { createRoomVisuals, createSingleDice, setDiceGlossiness, updateWallTransparency, applyDiceComboVFX, clearDiceComboVFX, setDiceComboColors, setDiceDefaultColor, getDefaultDiceColors } from './visuals'
+import {
+  getAchievementsToClaim,
+  claimAchievements,
+  getAchievementDisplayName,
+  getAchievementIcon,
+  getAchievementIconParts,
+  getAchievementRarity,
+  getAchievementsGroupedByRarity,
+  loadClaimedAchievements,
+  TOTAL_ACHIEVEMENTS
+} from './achievements'
 
 const SETTLE_THRESHOLD = 0.01
 const USER_ID_COOKIE = 'dice_user_id'
@@ -214,7 +225,6 @@ async function init() {
   let isFocusedOnRoom = false
   let focusedRoomIndex: number | null = null
   const history: HistoryEntry[] = []
-  const seenPatterns = new Set<string>()
 
   const historyList = document.getElementById('history-list')!
   const historyStats = document.getElementById('history-stats')!
@@ -293,15 +303,19 @@ async function init() {
     fullscreenBalanceEl.textContent = String(totalScore)
   }
 
+  const THROW_ITEM_AUTOFADE_MS = 5000
+
+  function fadeAndRemoveThrowItem(item: HTMLElement) {
+    if (!item.isConnected) return
+    throwListObserver.unobserve(item)
+    item.classList.add('fading')
+    setTimeout(() => item.remove(), 500)
+  }
+
   const throwListObserver = new IntersectionObserver(
     (entries) => {
       for (const e of entries) {
-        if (!e.isIntersecting) {
-          const item = e.target as HTMLElement
-          throwListObserver.unobserve(item)
-          item.classList.add('fading')
-          setTimeout(() => item.remove(), 500)
-        }
+        if (!e.isIntersecting) fadeAndRemoveThrowItem(e.target as HTMLElement)
       }
     },
     { root: fullscreenThrowListEl, rootMargin: '0px', threshold: 0 }
@@ -329,27 +343,26 @@ async function init() {
     void item.offsetHeight
     item.classList.add('visible')
     throwListObserver.observe(item)
+    setTimeout(() => fadeAndRemoveThrowItem(item), THROW_ITEM_AUTOFADE_MS)
   }
 
   const fullscreenBalanceWidget = document.getElementById('fullscreen-balance-widget')!
   const fullscreenThrowList = document.getElementById('fullscreen-throw-list')!
-  const globalStatsPanel = document.getElementById('global-stats-panel')!
   const balanceToggleBtn = document.getElementById('balance-toggle-btn')!
-  const statsToggleBtn = document.getElementById('stats-toggle-btn')!
   const mobileExpandBtn = document.getElementById('mobile-expand-btn')!
 
   const MOBILE_LAYOUT_KEY = 'dice-mobile-layout'
-  type MobileLayoutState = { balance: 'full' | 'minimized' | 'hidden'; stats: 'full' | 'hidden' }
+  type MobileLayoutState = { balance: 'full' | 'minimized' | 'hidden' }
 
   function getMobileLayoutState(): MobileLayoutState {
     try {
       const s = localStorage.getItem(MOBILE_LAYOUT_KEY)
       if (s) {
         const parsed = JSON.parse(s) as MobileLayoutState
-        if (parsed.balance && parsed.stats) return parsed
+        if (parsed.balance) return parsed
       }
     } catch (_) {}
-    return { balance: 'full', stats: 'full' }
+    return { balance: 'full' }
   }
 
   function setMobileLayoutState(state: MobileLayoutState) {
@@ -360,18 +373,14 @@ async function init() {
 
   function applyMobileLayoutState(state: MobileLayoutState) {
     fullscreenBalanceWidget.dataset.mobileState = state.balance
-    globalStatsPanel.dataset.mobileState = state.stats
-    const collapsed = state.balance !== 'full' || state.stats !== 'full'
-    const anyHidden = state.balance === 'hidden' || state.stats === 'hidden'
+    const collapsed = state.balance !== 'full'
+    const anyHidden = state.balance === 'hidden'
     canvasContainer.classList.toggle('mobile-ui-collapsed', collapsed)
     canvasContainer.classList.toggle('mobile-balance-hidden', state.balance === 'hidden')
     canvasContainer.classList.toggle('mobile-expand-visible', anyHidden)
     balanceToggleBtn.setAttribute('aria-label', state.balance === 'full' ? 'Minimize balance' : state.balance === 'minimized' ? 'Hide balance' : 'Show balance')
     balanceToggleBtn.setAttribute('title', state.balance === 'full' ? 'Minimize balance' : state.balance === 'minimized' ? 'Hide balance' : 'Show balance')
     balanceToggleBtn.textContent = state.balance === 'hidden' ? '+' : '−'
-    statsToggleBtn.setAttribute('aria-label', state.stats === 'full' ? 'Hide stats' : 'Show stats')
-    statsToggleBtn.setAttribute('title', state.stats === 'full' ? 'Hide stats' : 'Show stats')
-    statsToggleBtn.textContent = state.stats === 'full' ? '−' : '+'
   }
 
   function initMobileLayout() {
@@ -389,18 +398,30 @@ async function init() {
     applyMobileLayoutState(state)
   })
 
-  statsToggleBtn.addEventListener('click', (e) => {
-    e.stopPropagation()
-    const state = getMobileLayoutState()
-    state.stats = state.stats === 'full' ? 'hidden' : 'full'
+  mobileExpandBtn.addEventListener('click', () => {
+    const state: MobileLayoutState = { balance: 'full' }
     setMobileLayoutState(state)
     applyMobileLayoutState(state)
   })
 
-  mobileExpandBtn.addEventListener('click', () => {
-    const state: MobileLayoutState = { balance: 'full', stats: 'full' }
-    setMobileLayoutState(state)
-    applyMobileLayoutState(state)
+  const globalStatsModal = document.getElementById('global-stats-modal')!
+  const globalStatsCloseBtn = document.getElementById('global-stats-close')!
+
+  function openGlobalStatsModal() {
+    fetchGlobalStats()
+    globalStatsModal.classList.add('visible')
+    globalStatsModal.ariaHidden = 'false'
+  }
+
+  function closeGlobalStatsModal() {
+    globalStatsModal.classList.remove('visible')
+    globalStatsModal.ariaHidden = 'true'
+  }
+
+  document.getElementById('stats-btn')!.addEventListener('click', openGlobalStatsModal)
+  globalStatsCloseBtn.addEventListener('click', closeGlobalStatsModal)
+  globalStatsModal.addEventListener('click', (e) => {
+    if (e.target === globalStatsModal) closeGlobalStatsModal()
   })
 
   function setGameMode(enabled: boolean) {
@@ -408,7 +429,6 @@ async function init() {
     app.classList.toggle('game-mode', gameMode)
     fullscreenBalanceWidget.ariaHidden = enabled ? 'false' : 'true'
     fullscreenThrowList.ariaHidden = enabled ? 'false' : 'true'
-    globalStatsPanel.ariaHidden = enabled ? 'false' : 'true'
     if (gameMode) {
       setScreenMode('preview')
       updateGameOverlay()
@@ -900,6 +920,20 @@ async function init() {
     }, 2500)
   }
 
+  function showAchievementNotification(achievementName: string) {
+    const container = document.getElementById('notification-container')!
+    const el = document.createElement('div')
+    el.className = 'notification-toast notification-toast-achievement'
+    el.innerHTML = `<span class="achievement-notification-icon">✓</span> ${achievementName}`
+    container.appendChild(el)
+    el.offsetHeight
+    el.classList.add('visible')
+    setTimeout(() => {
+      el.classList.remove('visible')
+      setTimeout(() => el.remove(), 300)
+    }, 2000)
+  }
+
   function addHistoryEntry(entry: HistoryEntry) {
     history.push(entry)
     totalScore += entry.score
@@ -928,11 +962,12 @@ async function init() {
     }
     scoringList.prepend(scoringRow)
     const pattern = entry.escaped ? null : getRarityPattern(entry.diceResult)
-    if (pattern && !seenPatterns.has(pattern.name)) {
-      seenPatterns.add(pattern.name)
-      const rarity = getRarity(entry.diceResult)
-      const rarityStr = rarity > 0 ? ` (1 in ${formatRarity(rarity)})` : ''
-      showNotification(`First time: ${pattern.name}${rarityStr}`, 'pattern', { patternName: pattern.name, entry })
+    if (!entry.escaped && entry.diceResult.length === 6) {
+      const toClaim = getAchievementsToClaim(entry.diceResult)
+      const newlyClaimed = claimAchievements(toClaim)
+      if (newlyClaimed.length > 0) {
+        showAchievementNotification(getAchievementDisplayName(newlyClaimed[0]))
+      }
     }
     updateHistoryStats()
 
@@ -1019,7 +1054,6 @@ async function init() {
     scoringList.innerHTML = ''
     fullscreenThrowListEl.innerHTML = ''
     updateGameOverlay()
-    seenPatterns.clear()
     updateHistoryStats()
     localStats.totalThrows = 0
     localStats.sixes = { '6': 0, '66': 0, '666': 0, '6666': 0, '66666': 0, '666666': 0 }
@@ -1031,6 +1065,63 @@ async function init() {
       credentials: 'include',
       body: JSON.stringify({ balance: 0 })
     }).catch(() => {})
+  })
+
+  const achievementsModal = document.getElementById('achievements-modal')!
+  const achievementsGrid = document.getElementById('achievements-grid')!
+  const achievementsCountEl = document.getElementById('achievements-count')!
+  const achievementsCloseBtn = document.getElementById('achievements-close')!
+
+  function runRetroactiveAchievements() {
+    for (const entry of history) {
+      if (!entry.escaped && entry.diceResult.length === 6) {
+        claimAchievements(getAchievementsToClaim(entry.diceResult))
+      }
+    }
+  }
+
+  function renderAchievementsGrid() {
+    runRetroactiveAchievements()
+    const claimed = loadClaimedAchievements()
+    achievementsCountEl.textContent = `${claimed.size}/${TOTAL_ACHIEVEMENTS}`
+    const groups = getAchievementsGroupedByRarity()
+    achievementsGrid.innerHTML = groups
+      .map(({ groupName, ids }) => {
+        const cells = ids
+          .map((id) => {
+            const isClaimed = claimed.has(id)
+            const name = getAchievementDisplayName(id)
+            const rarity = getAchievementRarity(id)
+            const parts = getAchievementIconParts(id)
+            const iconHtml = isClaimed
+              ? (parts
+                  ? Array.from({ length: parts.count }, () => `<span class="achievement-emoji">${parts.emoji}</span>`).join('')
+                  : `<span class="achievement-emoji">${getAchievementIcon(id)}</span>`)
+              : `<span class="achievement-emoji">?</span>`
+            const count = isClaimed ? (parts?.count ?? 1) : 1
+            return `<div class="achievement-cell ${isClaimed ? 'claimed' : 'locked'}" data-id="${escapeHtml(id)}" data-rarity="${escapeHtml(rarity)}" data-tooltip="${escapeHtml(name)}" data-count="${count}"><span class="achievement-cell-icon">${iconHtml}</span></div>`
+          })
+          .join('')
+        return `<div class="achievement-group"><h5 class="achievement-group-title">${escapeHtml(groupName)}</h5><div class="achievement-group-grid">${cells}</div></div>`
+      })
+      .join('')
+  }
+
+  function openAchievementsModal() {
+    renderAchievementsGrid()
+    achievementsModal.classList.add('visible')
+    achievementsModal.ariaHidden = 'false'
+  }
+
+  function closeAchievementsModal() {
+    achievementsModal.classList.remove('visible')
+    achievementsModal.ariaHidden = 'true'
+  }
+
+  document.getElementById('achievements-btn')!.addEventListener('click', openAchievementsModal)
+  achievementsCloseBtn.addEventListener('click', closeAchievementsModal)
+  achievementsModal.addEventListener('click', (e) => {
+    if (e.target === achievementsModal) closeAchievementsModal()
   })
 
   const globalStatsEl = document.getElementById('global-stats-text')!
