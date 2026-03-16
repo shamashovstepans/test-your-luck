@@ -1677,27 +1677,32 @@ body {
     overscroll-behavior: contain;
   }
 
-  /* Achievements: smaller cells and emojis on mobile */
+  /* Achievements: smaller cells, scale down for iOS (emojis render larger on mobile) */
   .achievement-group-grid {
-    grid-template-columns: repeat(6, 1fr);
-    gap: 6px;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 4px;
   }
 
   .achievement-cell {
-    font-size: 20px;
+    font-size: 16px;
+  }
+
+  .achievement-cell-icon {
+    transform: scale(0.55);
+    transform-origin: center;
   }
 
   .achievement-cell[data-count="3"] .achievement-cell-icon {
-    font-size: 0.65em;
+    font-size: 0.7em;
   }
   .achievement-cell[data-count="4"] .achievement-cell-icon {
-    font-size: 0.55em;
+    font-size: 0.6em;
   }
   .achievement-cell[data-count="5"] .achievement-cell-icon {
-    font-size: 0.5em;
+    font-size: 0.55em;
   }
   .achievement-cell[data-count="6"] .achievement-cell-icon {
-    font-size: 0.45em;
+    font-size: 0.5em;
   }
 }
 
@@ -1807,7 +1812,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: min(32px, 8vw);
+  font-size: 32px;
   line-height: 1;
   padding: 0;
   border-radius: 8px;
@@ -1960,18 +1965,22 @@ body {
     right: calc(max(12px, env(safe-area-inset-right)) + 44px);
   }
 
-  /* Achievements: even smaller on very narrow screens */
+  /* Achievements: even smaller on very narrow (e.g. iPhone SE) */
   .achievement-group-grid {
-    grid-template-columns: repeat(5, 1fr);
-    gap: 4px;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 3px;
   }
 
   .achievement-cell {
-    font-size: min(18px, 6vw);
+    font-size: 14px;
   }
 
-  .achievement-cell[data-count="3"] .achievement-cell-icon { font-size: 0.6em; }
-  .achievement-cell[data-count="4"] .achievement-cell-icon { font-size: 0.5em; }
-  .achievement-cell[data-count="5"] .achievement-cell-icon { font-size: 0.45em; }
-  .achievement-cell[data-count="6"] .achievement-cell-icon { font-size: 0.4em; }
+  .achievement-cell-icon {
+    transform: scale(0.45);
+  }
+
+  .achievement-cell[data-count="3"] .achievement-cell-icon { font-size: 0.65em; }
+  .achievement-cell[data-count="4"] .achievement-cell-icon { font-size: 0.55em; }
+  .achievement-cell[data-count="5"] .achievement-cell-icon { font-size: 0.5em; }
+  .achievement-cell[data-count="6"] .achievement-cell-icon { font-size: 0.45em; }
 }
