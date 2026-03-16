@@ -1684,13 +1684,15 @@ body {
   }
 
   .achievement-cell {
-    font-size: 12px;
+    font-size: 10px;
   }
 
-  .achievement-cell-icon {
+  .achievements-modal .achievement-cell-icon {
     display: grid;
     place-items: center;
-    transform: scale(0.32);
+    width: 100%;
+    height: 100%;
+    transform: scale(0.28) !important;
     transform-origin: center;
   }
 
@@ -1986,13 +1988,16 @@ body {
   }
 
   .achievement-cell {
-    font-size: 10px;
+    font-size: 8px;
   }
 
-  .achievement-cell-icon {
+  .achievements-modal .achievement-cell-icon {
     display: grid;
     place-items: center;
-    transform: scale(0.26);
+    width: 100%;
+    height: 100%;
+    transform: scale(0.22) !important;
+    transform-origin: center;
   }
 
   .achievement-cell[data-count="3"] .achievement-cell-icon {
