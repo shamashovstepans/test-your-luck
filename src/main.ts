@@ -4,6 +4,14 @@ import { inject, track } from '@vercel/analytics'
 import { createScene, createDiceModelEnvironment, onResize, setPerformanceMode, getCameraForAllRooms, getCameraForRoom, startCameraAnimation, updateCameraAnimation, setMainLightDirection, type CameraAnimationState, type CameraView } from './scene'
 import { initRapier, createPhysicsWorld, throwDice, stepPhysics, isSettled, isOutOfBounds, syncRigidBodyToMesh, updateDiceMass, setGravity, getDiceResult, getFixedStep, type PhysicsState, type ThrowOptions, type SpawnLayout, type TargetMode, type PatternPreset } from './physics'
 import { createRoomVisuals, createSingleDice, setDiceGlossiness, updateWallTransparency, applyDiceComboVFX, clearDiceComboVFX } from './visuals'
+import {
+  getAchievementsToClaim,
+  claimAchievements,
+  getAchievementDisplayName,
+  TOTAL_ACHIEVEMENTS,
+  loadClaimedAchievements,
+  getAchievementsGroupedByRarity
+} from './achievements'
 
 const SETTLE_THRESHOLD = 0.01
 const USER_ID_COOKIE = 'dice_user_id'
@@ -214,7 +222,6 @@ async function init() {
   let isFocusedOnRoom = false
   let focusedRoomIndex: number | null = null
   const history: HistoryEntry[] = []
-  const seenPatterns = new Set<string>()
 
   const historyList = document.getElementById('history-list')!
   const historyStats = document.getElementById('history-stats')!
@@ -832,6 +839,20 @@ async function init() {
     }, 2500)
   }
 
+  function showAchievementNotification(achievementName: string) {
+    const container = document.getElementById('notification-container')!
+    const el = document.createElement('div')
+    el.className = 'notification-toast notification-toast-achievement'
+    el.innerHTML = `<span class="achievement-notification-icon">✓</span> ${achievementName}`
+    container.appendChild(el)
+    el.offsetHeight
+    el.classList.add('visible')
+    setTimeout(() => {
+      el.classList.remove('visible')
+      setTimeout(() => el.remove(), 300)
+    }, 2000)
+  }
+
   function addHistoryEntry(entry: HistoryEntry) {
     history.push(entry)
     totalScore += entry.score
@@ -860,11 +881,12 @@ async function init() {
     }
     scoringList.prepend(scoringRow)
     const pattern = entry.escaped ? null : getRarityPattern(entry.diceResult)
-    if (pattern && !seenPatterns.has(pattern.name)) {
-      seenPatterns.add(pattern.name)
-      const rarity = getRarity(entry.diceResult)
-      const rarityStr = rarity > 0 ? ` (1 in ${formatRarity(rarity)})` : ''
-      showNotification(`First time: ${pattern.name}${rarityStr}`, 'pattern', { patternName: pattern.name, entry })
+    if (!entry.escaped && entry.diceResult.length === 6) {
+      const toClaim = getAchievementsToClaim(entry.diceResult)
+      const newlyClaimed = claimAchievements(toClaim)
+      if (newlyClaimed.length > 0) {
+        showAchievementNotification(getAchievementDisplayName(newlyClaimed[0]))
+      }
     }
     updateHistoryStats()
 
@@ -951,7 +973,6 @@ async function init() {
     scoringList.innerHTML = ''
     fullscreenThrowListEl.innerHTML = ''
     updateGameOverlay()
-    seenPatterns.clear()
     updateHistoryStats()
     localStats.totalThrows = 0
     localStats.sixes = { '6': 0, '66': 0, '666': 0, '6666': 0, '66666': 0, '666666': 0 }
@@ -963,6 +984,56 @@ async function init() {
       credentials: 'include',
       body: JSON.stringify({ balance: 0 })
     }).catch(() => {})
+  })
+
+  const achievementsModal = document.getElementById('achievements-modal')!
+  const achievementsGrid = document.getElementById('achievements-grid')!
+  const achievementsCountEl = document.getElementById('achievements-count')!
+  const achievementsCloseBtn = document.getElementById('achievements-close')!
+
+  function runRetroactiveAchievements() {
+    for (const entry of history) {
+      if (!entry.escaped && entry.diceResult.length === 6) {
+        claimAchievements(getAchievementsToClaim(entry.diceResult))
+      }
+    }
+  }
+
+  function renderAchievementsGrid() {
+    runRetroactiveAchievements()
+    const claimed = loadClaimedAchievements()
+    achievementsCountEl.textContent = `${claimed.size}/${TOTAL_ACHIEVEMENTS}`
+    const groups = getAchievementsGroupedByRarity()
+    achievementsGrid.innerHTML = groups
+      .map(({ groupName, ids }) => {
+        const cells = ids
+          .map((id) => {
+            const isClaimed = claimed.has(id)
+            const name = getAchievementDisplayName(id)
+            const icon = isClaimed ? '✓' : '?'
+            return `<div class="achievement-cell ${isClaimed ? 'claimed' : 'locked'}" data-id="${escapeHtml(id)}" data-tooltip="${escapeHtml(name)}">${icon}</div>`
+          })
+          .join('')
+        return `<div class="achievement-group"><h5 class="achievement-group-title">${escapeHtml(groupName)}</h5><div class="achievement-group-grid">${cells}</div></div>`
+      })
+      .join('')
+  }
+
+  function openAchievementsModal() {
+    renderAchievementsGrid()
+    achievementsModal.classList.add('visible')
+    achievementsModal.ariaHidden = 'false'
+  }
+
+  function closeAchievementsModal() {
+    achievementsModal.classList.remove('visible')
+    achievementsModal.ariaHidden = 'true'
+  }
+
+  document.getElementById('achievements-btn')!.addEventListener('click', openAchievementsModal)
+  achievementsCloseBtn.addEventListener('click', closeAchievementsModal)
+  achievementsModal.addEventListener('click', (e) => {
+    if (e.target === achievementsModal) closeAchievementsModal()
   })
 
   const globalStatsEl = document.getElementById('global-stats-text')!

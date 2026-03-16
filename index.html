@@ -64,6 +64,7 @@
         </div>
         <div id="fullscreen-throw-list" class="fullscreen-throw-list" aria-hidden="true"></div>
         <button id="test-luck-btn" class="game-btn" title="Throw dice (Space). Press ` to show debug">Test luck</button>
+        <button id="achievements-btn" class="overlay-btn overlay-btn-achievements" title="Achievements" aria-label="Achievements">🏆</button>
         <button id="fullscreen-btn" class="overlay-btn overlay-btn-fullscreen debug-only" title="Full screen (F)" aria-label="Full screen">⛶</button>
         <button id="camera-view-btn" class="overlay-btn overlay-btn-camera debug-only" title="Switch to bottom view">↑</button>
         <button id="all-rooms-btn" class="overlay-btn debug-only" title="View all rooms">All rooms</button>
@@ -311,6 +312,16 @@
       </div>
     </div>
     <div id="notification-container" class="notification-container"></div>
+    <div id="achievements-modal" class="achievements-modal" aria-hidden="true">
+      <div class="achievements-modal-content">
+        <div class="achievements-modal-header">
+          <h3 class="achievements-modal-title">Achievements</h3>
+          <span id="achievements-count" class="achievements-count">0/28</span>
+          <button id="achievements-close" class="achievements-close" aria-label="Close">&times;</button>
+        </div>
+        <div id="achievements-grid" class="achievements-grid"></div>
+      </div>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
