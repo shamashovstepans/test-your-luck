@@ -483,6 +483,15 @@ body {
   right: calc(max(12px, env(safe-area-inset-right)) + 52px);
 }
 
+#canvas-container .overlay-btn-install {
+  right: calc(max(12px, env(safe-area-inset-right)) + 104px);
+  background: rgba(185, 28, 28, 0.9);
+}
+
+#canvas-container .overlay-btn-install:hover {
+  background: rgba(220, 38, 38, 0.95);
+}
+
 .overlay-btn-fullscreen {
   left: max(12px, env(safe-area-inset-left));
   right: auto;
@@ -1606,7 +1615,7 @@ body {
   color: #fff;
   cursor: pointer;
   box-shadow: 0 4px 24px rgba(155, 89, 182, 0.4);
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
 }
 
 #app.game-mode .game-btn {
@@ -1619,7 +1628,8 @@ body {
 }
 
 .game-btn:active {
-  transform: translateX(-50%) scale(0.98);
+  transform: translateX(-50%) translateY(3px) scale(0.92);
+  box-shadow: 0 2px 12px rgba(155, 89, 182, 0.35);
 }
 
 /* Mobile vertical layout */
@@ -2079,6 +2089,10 @@ body {
 @media (max-width: 400px) {
   #canvas-container .overlay-btn-stats {
     right: calc(max(12px, env(safe-area-inset-right)) + 44px);
+  }
+
+  #canvas-container .overlay-btn-install {
+    right: calc(max(12px, env(safe-area-inset-right)) + 88px);
   }
 
   /* Achievements: even smaller on very narrow (e.g. iPhone SE) */

@@ -1,9 +1,10 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { inject, track } from '@vercel/analytics'
-import { createScene, createDiceModelEnvironment, onResize, setPerformanceMode, getCameraForAllRooms, getCameraForRoom, startCameraAnimation, updateCameraAnimation, setMainLightDirection, type CameraAnimationState, type CameraView } from './scene'
+import { createScene, createDiceModelEnvironment, onResize, setPerformanceMode, getCameraForAllRooms, getCameraForRoom, startCameraAnimation, updateCameraAnimation, setMainLightDirection, triggerCameraShake, applyCameraShake, type CameraAnimationState, type CameraView } from './scene'
 import { initRapier, createPhysicsWorld, throwDice, stepPhysics, isSettled, isOutOfBounds, syncRigidBodyToMesh, updateDiceMass, setGravity, getDiceResult, getFixedStep, type PhysicsState, type ThrowOptions, type SpawnLayout, type TargetMode, type PatternPreset } from './physics'
-import { createRoomVisuals, createSingleDice, setDiceGlossiness, updateWallTransparency, applyDiceComboVFX, clearDiceComboVFX, setDiceComboColors, setDiceDefaultColor, getDefaultDiceColors } from './visuals'
+import { createRoomVisuals, createSingleDice, setDiceGlossiness, updateWallTransparency, applyDiceComboVFX, clearDiceComboVFX, setDiceComboColors, setDiceDefaultColor, getDefaultDiceColors, type DiceTrail } from './visuals'
+import { createCollisionParticles } from './particles'
 import {
   getAchievementsToClaim,
   claimAchievements,
@@ -135,12 +136,15 @@ function computeScore(diceResult: number[]): number {
 type RoomState = {
   physics: PhysicsState
   diceMeshes: THREE.Object3D[]
+  trails: DiceTrail[]
   group: THREE.Group
   roomIndex: number
   lastThrow: ThrowRecord | null
   hasRecordedThisThrow: boolean
   settledFrameCount: number
   lastThrowTime: number
+  wasSettled: boolean
+  groundShakeTriggered: boolean
 }
 
 type ScreenMode = 'sixes' | 'grid' | 'preview' | 'probability'
@@ -173,6 +177,7 @@ async function init() {
 
   const sceneState = createScene(container, diceModelEnv)
   const { scene, camera, renderer, controls, lighting } = sceneState
+  const collisionParticles = createCollisionParticles(scene)
 
   const weightSlider = document.getElementById('dice-weight') as HTMLInputElement
   const weightValue = document.getElementById('weight-value')!
@@ -249,6 +254,9 @@ async function init() {
   let previewGroup: THREE.Group | null = null
   let previewDiceMeshes: THREE.Object3D[] = []
   let previewLastThrow: ThrowRecord | null = null
+  let previewGroundShakeTriggered = false
+
+  let previewTrails: DiceTrail[] = []
 
   function ensurePreviewRoom() {
     const diceCount = getDiceCount()
@@ -258,9 +266,12 @@ async function init() {
     const created = createRoomVisuals(scene, -1, 0, 0, getGlossiness(), diceCount)
     previewGroup = created.group
     previewDiceMeshes = created.diceMeshes
+    previewTrails = created.trails
   }
 
   function destroyPreviewRoom() {
+    previewTrails.forEach((t) => t.dispose())
+    previewTrails = []
     if (previewPhysics) {
       previewPhysics.world.free()
       previewPhysics = null
@@ -424,12 +435,13 @@ async function init() {
     if (e.target === globalStatsModal) closeGlobalStatsModal()
   })
 
-  // PWA install banner: show on mobile when not already installed
+  // PWA install: overlay button + banner
   const PWA_DISMISS_KEY = 'dice-pwa-install-dismissed'
   const pwaBanner = document.getElementById('pwa-install-banner')!
   const pwaInstallText = document.getElementById('pwa-install-text')!
   const pwaInstallBtn = document.getElementById('pwa-install-btn')!
   const pwaDismissBtn = document.getElementById('pwa-install-dismiss')!
+  const pwaOverlayBtn = document.getElementById('pwa-install-btn-overlay')!
 
   function isStandalone(): boolean {
     return (
@@ -446,19 +458,23 @@ async function init() {
     return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
   }
 
-  function showPwaBanner(mode: 'android' | 'ios') {
+  function showPwaBanner(mode: 'android' | 'ios', force = false) {
     if (isStandalone() || !isMobile()) return
-    try {
-      if (localStorage.getItem(PWA_DISMISS_KEY)) return
-    } catch (_) {}
+    if (!force) {
+      try {
+        if (localStorage.getItem(PWA_DISMISS_KEY)) return
+      } catch (_) {}
+    }
     pwaBanner.ariaHidden = 'false'
     pwaBanner.classList.add('visible')
     if (mode === 'ios') {
-      pwaInstallText.textContent = 'Добавить на главный экран: Поделиться → «На экран „Домой“»'
+      pwaInstallText.textContent = 'Добавить на главный экран: нажмите Поделиться (□↑) → «На экран „Домой“»'
       pwaInstallBtn.style.display = 'none'
     } else {
-      pwaInstallText.textContent = 'Установить игру как приложение'
-      pwaInstallBtn.style.display = ''
+      pwaInstallText.textContent = deferredInstallPrompt
+        ? 'Установить игру как приложение'
+        : 'Меню браузера (⋮) → «Установить приложение» или «Добавить на главный экран»'
+      pwaInstallBtn.style.display = deferredInstallPrompt ? '' : 'none'
     }
   }
 
@@ -468,6 +484,22 @@ async function init() {
     deferredInstallPrompt = e as unknown as { prompt: () => Promise<void> }
     showPwaBanner('android')
   })
+
+  // Overlay button: always visible on mobile when not installed
+  if (!isStandalone() && isMobile()) {
+    pwaOverlayBtn.style.display = ''
+    pwaOverlayBtn.addEventListener('click', () => {
+      if (deferredInstallPrompt) {
+        deferredInstallPrompt.prompt()
+        deferredInstallPrompt = null
+      } else {
+        showPwaBanner(isIOS() ? 'ios' : 'android', true)
+      }
+    })
+    if (isIOS()) {
+      showPwaBanner('ios')
+    }
+  }
 
   pwaInstallBtn.addEventListener('click', async () => {
     if (deferredInstallPrompt) {
@@ -486,10 +518,7 @@ async function init() {
     } catch (_) {}
   })
 
-  if (!isStandalone() && isMobile()) {
-    if (isIOS()) {
-      showPwaBanner('ios')
-    }
+  if (!isStandalone() && isMobile() && !isIOS()) {
     // Android: banner shown when beforeinstallprompt fires
   }
 
@@ -674,6 +703,7 @@ async function init() {
     lastDiceCount = newDiceCount
 
     for (const r of rooms) {
+      r.trails.forEach((t) => t.dispose())
       scene.remove(r.group)
       r.physics.world.free()
     }
@@ -689,17 +719,20 @@ async function init() {
       const offsetZ = j * ROOM_SPACING - extent
 
       const physics = createPhysicsWorld(getWeight(), getGravity(), newDiceCount)
-      const { group, diceMeshes } = createRoomVisuals(scene, idx, offsetX, offsetZ, getGlossiness(), newDiceCount)
+      const { group, diceMeshes, trails } = createRoomVisuals(scene, idx, offsetX, offsetZ, getGlossiness(), newDiceCount)
 
       rooms.push({
         physics,
         diceMeshes,
+        trails,
         group,
         roomIndex: idx,
         lastThrow: null,
         hasRecordedThisThrow: false,
         settledFrameCount: 0,
-        lastThrowTime: performance.now()
+        lastThrowTime: performance.now(),
+        wasSettled: false,
+        groundShakeTriggered: false
       })
     }
 
@@ -1105,6 +1138,7 @@ async function init() {
     ensurePreviewRoom()
     clearDiceComboVFX(previewDiceMeshes)
     previewLastThrow = null
+    previewGroundShakeTriggered = false
     gravitySlider.value = String(entry.gravity)
     gravityValue.textContent = String(entry.gravity)
     weightSlider.value = String(entry.weight)
@@ -1848,6 +1882,8 @@ async function init() {
     const options = getThrowOptions({ seed })
     room.lastThrow = { seed, options, weight: getWeight(), gravity: getGravity() }
     room.hasRecordedThisThrow = false
+    room.wasSettled = false
+    room.groundShakeTriggered = false
     room.physics.currentMass = room.lastThrow.weight
     room.physics.currentGravity = room.lastThrow.gravity
     throwDice(room.physics, { ...options, seed })
@@ -1933,6 +1969,7 @@ async function init() {
       } else if (screenMode === 'preview') {
         ensurePreviewRoom()
         clearDiceComboVFX(previewDiceMeshes)
+        previewGroundShakeTriggered = false
         const opts = getThrowOptions({ seed: Date.now() })
         previewPhysics!.currentMass = getWeight()
         previewPhysics!.currentGravity = getGravity()
@@ -1947,6 +1984,7 @@ async function init() {
     if (screenMode === 'preview') {
       ensurePreviewRoom()
       clearDiceComboVFX(previewDiceMeshes)
+      previewGroundShakeTriggered = false
       const opts = getThrowOptions({ seed: Date.now() })
       previewPhysics!.currentMass = getWeight()
       previewPhysics!.currentGravity = getGravity()
@@ -1961,6 +1999,7 @@ async function init() {
   document.getElementById('preview-throw-btn')!.addEventListener('click', () => {
     ensurePreviewRoom()
     clearDiceComboVFX(previewDiceMeshes)
+    previewGroundShakeTriggered = false
     const opts = getThrowOptions({ seed: Date.now() })
     previewPhysics!.currentMass = getWeight()
     previewPhysics!.currentGravity = getGravity()
@@ -2171,8 +2210,20 @@ async function init() {
     }
 
     if (screenMode === 'preview' && previewPhysics) {
-      stepPhysics(previewPhysics, stepsPerFrame)
-      if (isSettled(previewPhysics, SETTLE_THRESHOLD)) {
+      stepPhysics(
+        previewPhysics,
+        stepsPerFrame,
+        (pos) => collisionParticles.spawn(pos),
+        () => {
+          if (!previewGroundShakeTriggered) {
+            previewGroundShakeTriggered = true
+            const shakeDuration = 0.2 / Math.max(1, simSpeed)
+            triggerCameraShake(0.45, shakeDuration)
+          }
+        }
+      )
+      const previewSettled = isSettled(previewPhysics, SETTLE_THRESHOLD)
+      if (previewSettled) {
         const diceResult = getDiceResult(previewPhysics)
         const breakdown = computeScoreBreakdown(diceResult)
         applyDiceComboVFX(previewDiceMeshes, diceResult, breakdown.badges)
@@ -2189,6 +2240,10 @@ async function init() {
       }
       for (let i = 0; i < previewPhysics.diceBodies.length; i++) {
         syncRigidBodyToMesh(previewPhysics.diceBodies[i], previewDiceMeshes[i])
+        const rb = previewPhysics.diceBodies[i]
+        const vel = rb.linvel()
+        const velMag = Math.sqrt(vel.x * vel.x + vel.y * vel.y + vel.z * vel.z)
+        previewTrails[i]?.update(previewDiceMeshes[i].position, velMag)
       }
     } else {
       const maxConcurrent = getMaxConcurrent()
@@ -2198,11 +2253,32 @@ async function init() {
         if (room.physics.simulatingThrow || room.physics.pendingThrow != null) {
           activeCount++
           if (activeCount <= maxConcurrent) {
-            stepPhysics(room.physics, stepsPerFrame)
+            const offset = room.group.position
+            stepPhysics(
+              room.physics,
+              stepsPerFrame,
+              (pos) =>
+                collisionParticles.spawn({
+                  x: pos.x + offset.x,
+                  y: pos.y + offset.y,
+                  z: pos.z + offset.z
+                }),
+              () => {
+                if (!room.groundShakeTriggered) {
+                  room.groundShakeTriggered = true
+                  const shakeDuration = 0.2 / Math.max(1, simSpeed)
+                  triggerCameraShake(0.45, shakeDuration)
+                }
+              }
+            )
           }
         }
         for (let i = 0; i < room.physics.diceBodies.length; i++) {
           syncRigidBodyToMesh(room.physics.diceBodies[i], room.diceMeshes[i])
+          const rb = room.physics.diceBodies[i]
+          const vel = rb.linvel()
+          const velMag = Math.sqrt(vel.x * vel.x + vel.y * vel.y + vel.z * vel.z)
+          room.trails[i]?.update(room.diceMeshes[i].position, velMag)
         }
 
         if (isOutOfBounds(room.physics)) {
@@ -2216,6 +2292,9 @@ async function init() {
             doThrowForRoom(room)
           }
         } else if (isSettled(room.physics, SETTLE_THRESHOLD)) {
+          if (!room.wasSettled) {
+            room.wasSettled = true
+          }
           if (room.lastThrow && !room.hasRecordedThisThrow) {
             const diceResult = getDiceResult(room.physics)
             const breakdown = computeScoreBreakdown(diceResult)
@@ -2242,6 +2321,7 @@ async function init() {
           }
         } else {
           room.settledFrameCount = 0
+          room.wasSettled = false
         }
       }
     }
@@ -2256,6 +2336,8 @@ async function init() {
     }
 
     controls.update()
+    applyCameraShake(camera, controls)
+    collisionParticles.update(deltaSec * Math.max(1, simSpeed))
     updateCameraDebugDisplay(camera, controls)
     renderer.render(scene, camera)
 

@@ -209,3 +209,72 @@ export function updateCameraAnimation(
   controls.target.lerpVectors(state.fromTarget, state.toTarget, smooth)
   return s >= 1
 }
+
+export type CameraShakeState = {
+  intensity: number
+  duration: number
+  startTime: number
+  dirX: number
+  dirY: number
+  dirZ: number
+  basePosition: THREE.Vector3
+  baseTarget: THREE.Vector3
+  baseCaptured: boolean
+}
+
+let cameraShakeState: CameraShakeState | null = null
+
+/** Trigger a camera shake. Base position is captured on first apply (after controls.update). */
+export function triggerCameraShake(intensity = 0.4, duration = 0.12): void {
+  const theta = Math.random() * Math.PI * 2
+  const phi = Math.random() * Math.PI * 0.4
+  const dirX = Math.sin(phi) * Math.cos(theta)
+  const dirY = Math.cos(phi)
+  const dirZ = Math.sin(phi) * Math.sin(theta)
+  cameraShakeState = {
+    intensity,
+    duration,
+    startTime: performance.now() / 1000,
+    dirX,
+    dirY,
+    dirZ,
+    basePosition: new THREE.Vector3(),
+    baseTarget: new THREE.Vector3(),
+    baseCaptured: false
+  }
+}
+
+/** Apply camera shake. Vibrates around base position and returns to it when done. */
+export function applyCameraShake(camera: THREE.PerspectiveCamera, controls: OrbitControls): boolean {
+  if (!cameraShakeState) return false
+  const state = cameraShakeState
+  const t = performance.now() / 1000 - state.startTime
+  if (t >= state.duration) {
+    camera.position.copy(state.basePosition)
+    controls.target.copy(state.baseTarget)
+    cameraShakeState = null
+    return false
+  }
+  if (!state.baseCaptured) {
+    state.basePosition.copy(camera.position)
+    state.baseTarget.copy(controls.target)
+    state.baseCaptured = true
+  }
+  const progress = t / state.duration
+  const impactCurve = 1 - progress * progress * progress
+  const wobble = Math.sin(t * 80) * 0.3 * (1 - progress)
+  const magnitude = state.intensity * (impactCurve + wobble)
+  const offset = new THREE.Vector3(
+    state.dirX * magnitude,
+    state.dirY * magnitude,
+    state.dirZ * magnitude
+  )
+  camera.position.copy(state.basePosition).add(offset)
+  controls.target.copy(state.baseTarget).add(offset)
+  return true
+}
+
+/** Clear camera shake (e.g. when switching views). */
+export function clearCameraShake(): void {
+  cameraShakeState = null
+}

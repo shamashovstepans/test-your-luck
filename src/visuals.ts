@@ -260,9 +260,64 @@ export function updateWallTransparency(
   }
 }
 
+const TRAIL_LENGTH = 18
+const TRAIL_VELOCITY_THRESHOLD = 0.3
+const TRAIL_OPACITY = 0.2
+
+export type DiceTrail = {
+  update: (position: THREE.Vector3, velocityMagnitude: number) => void
+  dispose: () => void
+}
+
+function createDiceTrail(parent: THREE.Object3D): DiceTrail {
+  const positions = new Float32Array(TRAIL_LENGTH * 3)
+  for (let i = 0; i < TRAIL_LENGTH * 3; i++) positions[i] = 0
+  const geo = new THREE.BufferGeometry()
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+  geo.setDrawRange(0, 0)
+  const mat = new THREE.LineBasicMaterial({
+    color: 0xffffff,
+    transparent: true,
+    opacity: TRAIL_OPACITY,
+    linewidth: 1,
+    depthWrite: false
+  })
+  const line = new THREE.Line(geo, mat)
+  parent.add(line)
+
+  const posBuffer: { x: number; y: number; z: number }[] = []
+  let pointCount = 0
+
+  return {
+    update(position: THREE.Vector3, velocityMagnitude: number) {
+      if (velocityMagnitude < TRAIL_VELOCITY_THRESHOLD) {
+        pointCount = 0
+        geo.setDrawRange(0, 0)
+        return
+      }
+      posBuffer.push({ x: position.x, y: position.y, z: position.z })
+      if (posBuffer.length > TRAIL_LENGTH) posBuffer.shift()
+      pointCount = posBuffer.length
+      const attr = geo.getAttribute('position') as THREE.BufferAttribute
+      for (let i = 0; i < pointCount; i++) {
+        const p = posBuffer[i]
+        attr.setXYZ(i, p.x, p.y, p.z)
+      }
+      attr.needsUpdate = true
+      geo.setDrawRange(0, pointCount < 2 ? 0 : pointCount)
+    },
+    dispose() {
+      parent.remove(line)
+      geo.dispose()
+      mat.dispose()
+    }
+  }
+}
+
 export type RoomVisuals = {
   group: THREE.Group
   diceMeshes: THREE.Object3D[]
+  trails: DiceTrail[]
 }
 
 /** Create a room's visuals (box + dice) in a group. Position the group at (offsetX, 0, offsetZ). */
@@ -272,8 +327,9 @@ export function createRoomVisuals(parent: THREE.Object3D, roomIndex: number, off
   group.userData = { roomIndex }
   createWoodenBox(group)
   const diceMeshes = createDiceMeshesInGroup(group, glossiness, diceCount)
+  const trails = diceMeshes.map(() => createDiceTrail(group))
   parent.add(group)
-  return { group, diceMeshes }
+  return { group, diceMeshes, trails }
 }
 
 function createDiceMeshesInGroup(parent: THREE.Object3D, glossiness: number = DEFAULT_GLOSSINESS, diceCount: number = 6): THREE.Object3D[] {

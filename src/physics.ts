@@ -211,6 +211,7 @@ function createDiceRigidBody(world: RAPIER.World, mass: number): RAPIER.RigidBod
     .setMass(mass)
     .setFriction(DICE_FRICTION)
     .setRestitution(DICE_RESTITUTION)
+    .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS)
 
   const rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic()
     .setLinearDamping(0.1)
@@ -380,11 +381,48 @@ export function throwDice(state: PhysicsState, options?: ThrowOptions): void {
   state.pendingThrow = options ?? null
 }
 
-/** Run physics. stepsPerFrame controls simulation speed (1 = normal, higher = faster). */
-export function stepPhysics(state: PhysicsState, stepsPerFrame: number): void {
+const FLOOR_Y_THRESHOLD = -7
+
+/** Run physics. stepsPerFrame controls simulation speed (1 = normal, higher = faster). Optional onCollision called for each collision start. Optional onGroundCollision called when a dice first hits the floor. */
+export function stepPhysics(
+  state: PhysicsState,
+  stepsPerFrame: number,
+  onCollision?: (position: { x: number; y: number; z: number }) => void,
+  onGroundCollision?: () => void
+): void {
+  const drainCollisions = () => {
+    if (!onCollision && !onGroundCollision) return
+    state.eventQueue.drainCollisionEvents((handle1, handle2, started) => {
+      if (!started) return
+      const col1 = state.world.getCollider(handle1)
+      const col2 = state.world.getCollider(handle2)
+      const rb1 = col1?.parent()
+      const rb2 = col2?.parent()
+      if (!rb1 || !rb2) return
+      const t1 = rb1.translation()
+      const t2 = rb2.translation()
+      const isFixed1 = rb1.bodyType() === RAPIER.RigidBodyType.Fixed
+      const isFixed2 = rb2.bodyType() === RAPIER.RigidBodyType.Fixed
+      if (isFixed1 !== isFixed2) {
+        const fixedRb = isFixed1 ? rb1 : rb2
+        const fixedY = fixedRb.translation().y
+        if (fixedY < FLOOR_Y_THRESHOLD) {
+          onGroundCollision?.()
+        }
+      }
+      if (onCollision) {
+        onCollision({
+          x: (t1.x + t2.x) / 2,
+          y: (t1.y + t2.y) / 2,
+          z: (t1.z + t2.z) / 2
+        })
+      }
+    })
+  }
   if (state.simulatingThrow) {
     for (let i = 0; i < stepsPerFrame; i++) {
-      state.world.step()
+      state.world.step(state.eventQueue)
+      drainCollisions()
       if (isSettled(state, SETTLE_THRESHOLD_STEP)) {
         state.simulatingThrow = false
         return
@@ -398,7 +436,8 @@ export function stepPhysics(state: PhysicsState, stepsPerFrame: number): void {
     applyThrow(state, opts)
     state.simulatingThrow = true
     for (let i = 0; i < stepsPerFrame; i++) {
-      state.world.step()
+      state.world.step(state.eventQueue)
+      drainCollisions()
       if (isSettled(state, SETTLE_THRESHOLD_STEP)) {
         state.simulatingThrow = false
         return
@@ -406,7 +445,8 @@ export function stepPhysics(state: PhysicsState, stepsPerFrame: number): void {
     }
     return
   }
-  state.world.step()
+  state.world.step(state.eventQueue)
+  drainCollisions()
 }
 
 export function getFixedStep(): number {
