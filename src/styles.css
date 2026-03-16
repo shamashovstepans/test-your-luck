@@ -1676,6 +1676,71 @@ body {
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
   }
+
+  /* Achievements: aggressive scale for iOS, use grid for layout */
+  .achievements-modal {
+    padding: 12px;
+  }
+
+  .achievements-modal .achievements-modal-content {
+    max-width: 100%;
+    width: 100%;
+    margin: 0;
+  }
+
+  .achievements-modal .achievements-grid {
+    padding: 12px;
+  }
+
+  .achievement-group {
+    align-items: stretch;
+  }
+
+  .achievement-group-grid {
+    grid-template-columns: repeat(6, 1fr);
+    gap: 4px;
+    justify-content: start;
+    justify-items: stretch;
+    width: 100%;
+  }
+
+  .achievement-cell {
+    font-size: 10px;
+  }
+
+  .achievements-modal .achievement-cell-icon {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 100%;
+    transform: scale(0.28) !important;
+    transform-origin: center;
+  }
+
+  .achievement-cell[data-count="3"] .achievement-cell-icon {
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: 1fr;
+    font-size: 0.65em;
+  }
+  .achievement-cell[data-count="4"] .achievement-cell-icon {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    font-size: 0.55em;
+  }
+  .achievement-cell[data-count="5"] .achievement-cell-icon {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    font-size: 0.5em;
+  }
+  .achievement-cell[data-count="6"] .achievement-cell-icon {
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    font-size: 0.45em;
+  }
+
+  .achievement-cell .achievement-emoji {
+    flex: none;
+  }
 }
 
 /* Achievements modal - Cookie Clicker style */
@@ -1793,6 +1858,7 @@ body {
   cursor: default;
   position: relative;
   transition: opacity 0.2s;
+  overflow: hidden;
 }
 
 .achievement-cell-icon {
@@ -1934,5 +2000,51 @@ body {
 @media (max-width: 400px) {
   #canvas-container .overlay-btn-stats {
     right: calc(max(12px, env(safe-area-inset-right)) + 44px);
+  }
+
+  /* Achievements: even smaller on very narrow (e.g. iPhone SE) */
+  .achievement-group-grid {
+    grid-template-columns: repeat(6, 1fr);
+    gap: 3px;
+    justify-content: start;
+    justify-items: stretch;
+  }
+
+  .achievement-cell {
+    font-size: 8px;
+  }
+
+  .achievements-modal .achievement-cell-icon {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 100%;
+    transform: scale(0.22) !important;
+    transform-origin: center;
+  }
+
+  .achievement-cell[data-count="3"] .achievement-cell-icon {
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: 1fr;
+    font-size: 0.6em;
+  }
+  .achievement-cell[data-count="4"] .achievement-cell-icon {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    font-size: 0.5em;
+  }
+  .achievement-cell[data-count="5"] .achievement-cell-icon {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    font-size: 0.45em;
+  }
+  .achievement-cell[data-count="6"] .achievement-cell-icon {
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    font-size: 0.4em;
+  }
+
+  .achievement-cell .achievement-emoji {
+    flex: none;
   }
 }
