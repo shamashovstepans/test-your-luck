@@ -8,9 +8,12 @@ import {
   getAchievementsToClaim,
   claimAchievements,
   getAchievementDisplayName,
-  TOTAL_ACHIEVEMENTS,
+  getAchievementIcon,
+  getAchievementIconParts,
+  getAchievementRarity,
+  getAchievementsGroupedByRarity,
   loadClaimedAchievements,
-  getAchievementsGroupedByRarity
+  TOTAL_ACHIEVEMENTS
 } from './achievements'
 
 const SETTLE_THRESHOLD = 0.01
@@ -1088,8 +1091,15 @@ async function init() {
           .map((id) => {
             const isClaimed = claimed.has(id)
             const name = getAchievementDisplayName(id)
-            const icon = isClaimed ? '✓' : '?'
-            return `<div class="achievement-cell ${isClaimed ? 'claimed' : 'locked'}" data-id="${escapeHtml(id)}" data-tooltip="${escapeHtml(name)}">${icon}</div>`
+            const rarity = getAchievementRarity(id)
+            const parts = getAchievementIconParts(id)
+            const iconHtml = isClaimed
+              ? (parts
+                  ? Array.from({ length: parts.count }, () => `<span class="achievement-emoji">${parts.emoji}</span>`).join('')
+                  : `<span class="achievement-emoji">${getAchievementIcon(id)}</span>`)
+              : `<span class="achievement-emoji">?</span>`
+            const count = isClaimed ? (parts?.count ?? 1) : 1
+            return `<div class="achievement-cell ${isClaimed ? 'claimed' : 'locked'}" data-id="${escapeHtml(id)}" data-rarity="${escapeHtml(rarity)}" data-tooltip="${escapeHtml(name)}" data-count="${count}"><span class="achievement-cell-icon">${iconHtml}</span></div>`
           })
           .join('')
         return `<div class="achievement-group"><h5 class="achievement-group-title">${escapeHtml(groupName)}</h5><div class="achievement-group-grid">${cells}</div></div>`

@@ -76,6 +76,38 @@ export function getAchievementDisplayName(id: string): string {
   return id.split('').join('-')
 }
 
+/** Number emojis 1–6 for N-of-a-kind – show the dice value. */
+const VALUE_EMOJI = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣']
+
+/** Parts for N-of-a-kind (for multi-line wrap), or null for single icon. */
+export function getAchievementIconParts(id: string): { emoji: string; count: number } | null {
+  if (!/^\d+$/.test(id)) return null
+  const v = parseInt(id[0], 10)
+  return { emoji: VALUE_EMOJI[v - 1] ?? '?', count: id.length }
+}
+
+/** Icon for an achievement. */
+export function getAchievementIcon(id: string): string {
+  if (id === LARGE_STRAIGHT) return '📐'
+  if (id === SMALL_STRAIGHT) return '📏'
+  if (id === TWO_PAIR) return '🔗'
+  if (id === THREE_PAIR) return '🎴'
+  const parts = getAchievementIconParts(id)
+  return parts ? parts.emoji.repeat(parts.count) : '?'
+}
+
+/** Rarity tier for styling (rarest first). */
+export type AchievementRarity = 'six' | 'five' | 'four' | 'three' | 'straight' | 'special'
+
+export function getAchievementRarity(id: string): AchievementRarity {
+  if (id.length === 6) return 'six'
+  if (id.length === 5) return 'five'
+  if (id.length === 4) return 'four'
+  if (id.length === 3) return 'three'
+  if (id === LARGE_STRAIGHT || id === SMALL_STRAIGHT) return 'straight'
+  return 'special'
+}
+
 /** Load claimed achievement IDs from localStorage. */
 export function loadClaimedAchievements(): Set<string> {
   try {
