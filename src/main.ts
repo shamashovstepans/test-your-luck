@@ -2253,15 +2253,16 @@ async function init() {
         if (room.physics.simulatingThrow || room.physics.pendingThrow != null) {
           activeCount++
           if (activeCount <= maxConcurrent) {
-            const offset = room.group.position
+            const roomWorldPos = new THREE.Vector3()
+            room.group.getWorldPosition(roomWorldPos)
             stepPhysics(
               room.physics,
               stepsPerFrame,
               (pos) =>
                 collisionParticles.spawn({
-                  x: pos.x + offset.x,
-                  y: pos.y + offset.y,
-                  z: pos.z + offset.z
+                  x: pos.x + roomWorldPos.x,
+                  y: pos.y + roomWorldPos.y,
+                  z: pos.z + roomWorldPos.z
                 }),
               () => {
                 if (!room.groundShakeTriggered) {

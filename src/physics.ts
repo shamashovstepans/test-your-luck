@@ -411,11 +411,19 @@ export function stepPhysics(
         }
       }
       if (onCollision) {
-        onCollision({
-          x: (t1.x + t2.x) / 2,
-          y: (t1.y + t2.y) / 2,
-          z: (t1.z + t2.z) / 2
-        })
+        let px: number, py: number, pz: number
+        if (isFixed1 !== isFixed2) {
+          const dynamicRb = isFixed1 ? rb2 : rb1
+          const t = dynamicRb.translation()
+          px = t.x
+          py = t.y
+          pz = t.z
+        } else {
+          px = (t1.x + t2.x) / 2
+          py = (t1.y + t2.y) / 2
+          pz = (t1.z + t2.z) / 2
+        }
+        onCollision({ x: px, y: py, z: pz })
       }
     })
   }
