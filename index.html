@@ -65,6 +65,11 @@
         <button id="test-luck-btn" class="game-btn" title="Throw dice (Space). Press ` to show debug">Test luck</button>
         <button id="stats-btn" class="overlay-btn overlay-btn-stats" title="Global stats" aria-label="Global stats">📊</button>
         <button id="achievements-btn" class="overlay-btn overlay-btn-achievements" title="Achievements" aria-label="Achievements">🏆</button>
+        <div id="pwa-install-banner" class="pwa-install-banner" aria-hidden="true">
+          <span id="pwa-install-text" class="pwa-install-text"></span>
+          <button type="button" id="pwa-install-btn" class="pwa-install-btn">Установить</button>
+          <button type="button" id="pwa-install-dismiss" class="pwa-install-dismiss" aria-label="Закрыть">&times;</button>
+        </div>
         <button id="fullscreen-btn" class="overlay-btn overlay-btn-fullscreen debug-only" title="Full screen (F)" aria-label="Full screen">⛶</button>
         <button id="camera-view-btn" class="overlay-btn overlay-btn-camera debug-only" title="Switch to bottom view">↑</button>
         <button id="all-rooms-btn" class="overlay-btn debug-only" title="View all rooms">All rooms</button>
