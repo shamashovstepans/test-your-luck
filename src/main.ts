@@ -424,6 +424,75 @@ async function init() {
     if (e.target === globalStatsModal) closeGlobalStatsModal()
   })
 
+  // PWA install banner: show on mobile when not already installed
+  const PWA_DISMISS_KEY = 'dice-pwa-install-dismissed'
+  const pwaBanner = document.getElementById('pwa-install-banner')!
+  const pwaInstallText = document.getElementById('pwa-install-text')!
+  const pwaInstallBtn = document.getElementById('pwa-install-btn')!
+  const pwaDismissBtn = document.getElementById('pwa-install-dismiss')!
+
+  function isStandalone(): boolean {
+    return (
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as Navigator & { standalone?: boolean }).standalone === true
+    )
+  }
+
+  function isMobile(): boolean {
+    return 'ontouchstart' in window || navigator.maxTouchPoints > 0
+  }
+
+  function isIOS(): boolean {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  }
+
+  function showPwaBanner(mode: 'android' | 'ios') {
+    if (isStandalone() || !isMobile()) return
+    try {
+      if (localStorage.getItem(PWA_DISMISS_KEY)) return
+    } catch (_) {}
+    pwaBanner.ariaHidden = 'false'
+    pwaBanner.classList.add('visible')
+    if (mode === 'ios') {
+      pwaInstallText.textContent = 'Добавить на главный экран: Поделиться → «На экран „Домой“»'
+      pwaInstallBtn.style.display = 'none'
+    } else {
+      pwaInstallText.textContent = 'Установить игру как приложение'
+      pwaInstallBtn.style.display = ''
+    }
+  }
+
+  let deferredInstallPrompt: { prompt: () => Promise<void> } | null = null
+  window.addEventListener('beforeinstallprompt', (e: Event) => {
+    e.preventDefault()
+    deferredInstallPrompt = e as unknown as { prompt: () => Promise<void> }
+    showPwaBanner('android')
+  })
+
+  pwaInstallBtn.addEventListener('click', async () => {
+    if (deferredInstallPrompt) {
+      await deferredInstallPrompt.prompt()
+      deferredInstallPrompt = null
+      pwaBanner.classList.remove('visible')
+      pwaBanner.ariaHidden = 'true'
+    }
+  })
+
+  pwaDismissBtn.addEventListener('click', () => {
+    pwaBanner.classList.remove('visible')
+    pwaBanner.ariaHidden = 'true'
+    try {
+      localStorage.setItem(PWA_DISMISS_KEY, '1')
+    } catch (_) {}
+  })
+
+  if (!isStandalone() && isMobile()) {
+    if (isIOS()) {
+      showPwaBanner('ios')
+    }
+    // Android: banner shown when beforeinstallprompt fires
+  }
+
   function setGameMode(enabled: boolean) {
     gameMode = enabled
     app.classList.toggle('game-mode', gameMode)
