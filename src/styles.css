@@ -1678,9 +1678,30 @@ body {
   }
 
   /* Achievements: aggressive scale for iOS, use grid for layout */
+  .achievements-modal {
+    padding: 12px;
+  }
+
+  .achievements-modal .achievements-modal-content {
+    max-width: 100%;
+    width: 100%;
+    margin: 0;
+  }
+
+  .achievements-modal .achievements-grid {
+    padding: 12px;
+  }
+
+  .achievement-group {
+    align-items: stretch;
+  }
+
   .achievement-group-grid {
-    grid-template-columns: repeat(8, 1fr);
-    gap: 3px;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 4px;
+    justify-content: start;
+    justify-items: stretch;
+    width: 100%;
   }
 
   .achievement-cell {
@@ -1983,8 +2004,10 @@ body {
 
   /* Achievements: even smaller on very narrow (e.g. iPhone SE) */
   .achievement-group-grid {
-    grid-template-columns: repeat(8, 1fr);
-    gap: 2px;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 3px;
+    justify-content: start;
+    justify-items: stretch;
   }
 
   .achievement-cell {
