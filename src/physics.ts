@@ -109,6 +109,8 @@ export type ThrowOptions = {
   patternPreset?: PatternPreset
 }
 
+const COLLISION_GRACE_STEPS = 8
+
 export type PhysicsState = {
   world: RAPIER.World
   diceBodies: RAPIER.RigidBody[]
@@ -118,6 +120,7 @@ export type PhysicsState = {
   currentMass: number
   currentGravity: number
   diceCount: number
+  collisionGraceSteps: number
 }
 
 function buildWorld(mass: number, gravity: number, diceCount: number): { world: RAPIER.World; diceBodies: RAPIER.RigidBody[]; eventQueue: RAPIER.EventQueue } {
@@ -138,7 +141,7 @@ function buildWorld(mass: number, gravity: number, diceCount: number): { world: 
 export function createPhysicsWorld(initialMass = 3, gravity = DEFAULT_GRAVITY, diceCount = 6): PhysicsState {
   const count = Math.max(MIN_DICE, Math.min(MAX_DICE, diceCount))
   const { world, diceBodies, eventQueue } = buildWorld(initialMass, gravity, count)
-  return { world, diceBodies, eventQueue, pendingThrow: null, simulatingThrow: false, currentMass: initialMass, currentGravity: gravity, diceCount: count }
+  return { world, diceBodies, eventQueue, pendingThrow: null, simulatingThrow: false, currentMass: initialMass, currentGravity: gravity, diceCount: count, collisionGraceSteps: 0 }
 }
 
 /** Rebuild world from scratch for determinism */
@@ -150,6 +153,7 @@ export function resetWorld(state: PhysicsState): void {
   state.eventQueue = eventQueue
   state.simulatingThrow = false
   state.pendingThrow = null
+  state.collisionGraceSteps = COLLISION_GRACE_STEPS
 }
 
 export function updateDiceMass(state: PhysicsState, mass: number): void {
@@ -391,6 +395,7 @@ export function stepPhysics(
   onGroundCollision?: () => void
 ): void {
   const drainCollisions = () => {
+    if (state.collisionGraceSteps > 0) state.collisionGraceSteps--
     if (!onCollision && !onGroundCollision) return
     state.eventQueue.drainCollisionEvents((handle1, handle2, started) => {
       if (!started) return
@@ -410,7 +415,7 @@ export function stepPhysics(
           onGroundCollision?.()
         }
       }
-      if (onCollision) {
+      if (onCollision && state.collisionGraceSteps <= 0) {
         let px: number, py: number, pz: number
         if (isFixed1 !== isFixed2) {
           const dynamicRb = isFixed1 ? rb2 : rb1

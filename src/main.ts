@@ -1137,6 +1137,7 @@ async function init() {
     setScreenMode('preview')
     ensurePreviewRoom()
     clearDiceComboVFX(previewDiceMeshes)
+    previewTrails.forEach((t) => t.clear())
     previewLastThrow = null
     previewGroundShakeTriggered = false
     gravitySlider.value = String(entry.gravity)
@@ -1878,6 +1879,7 @@ async function init() {
 
   function doThrowForRoom(room: RoomState, opts?: { seed?: number }) {
     clearDiceComboVFX(room.diceMeshes)
+    room.trails.forEach((t) => t.clear())
     const seed = opts?.seed ?? Date.now() + room.roomIndex * 1000
     const options = getThrowOptions({ seed })
     room.lastThrow = { seed, options, weight: getWeight(), gravity: getGravity() }
@@ -1969,6 +1971,7 @@ async function init() {
       } else if (screenMode === 'preview') {
         ensurePreviewRoom()
         clearDiceComboVFX(previewDiceMeshes)
+        previewTrails.forEach((t) => t.clear())
         previewGroundShakeTriggered = false
         const opts = getThrowOptions({ seed: Date.now() })
         previewPhysics!.currentMass = getWeight()
@@ -1984,6 +1987,7 @@ async function init() {
     if (screenMode === 'preview') {
       ensurePreviewRoom()
       clearDiceComboVFX(previewDiceMeshes)
+      previewTrails.forEach((t) => t.clear())
       previewGroundShakeTriggered = false
       const opts = getThrowOptions({ seed: Date.now() })
       previewPhysics!.currentMass = getWeight()
@@ -1999,6 +2003,7 @@ async function init() {
   document.getElementById('preview-throw-btn')!.addEventListener('click', () => {
     ensurePreviewRoom()
     clearDiceComboVFX(previewDiceMeshes)
+    previewTrails.forEach((t) => t.clear())
     previewGroundShakeTriggered = false
     const opts = getThrowOptions({ seed: Date.now() })
     previewPhysics!.currentMass = getWeight()

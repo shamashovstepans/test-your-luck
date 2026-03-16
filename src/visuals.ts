@@ -266,6 +266,7 @@ const TRAIL_OPACITY = 0.2
 
 export type DiceTrail = {
   update: (position: THREE.Vector3, velocityMagnitude: number) => void
+  clear: () => void
   dispose: () => void
 }
 
@@ -305,6 +306,11 @@ function createDiceTrail(parent: THREE.Object3D): DiceTrail {
       }
       attr.needsUpdate = true
       geo.setDrawRange(0, pointCount < 2 ? 0 : pointCount)
+    },
+    clear() {
+      posBuffer.length = 0
+      pointCount = 0
+      geo.setDrawRange(0, 0)
     },
     dispose() {
       parent.remove(line)
