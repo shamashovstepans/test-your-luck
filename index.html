@@ -52,32 +52,10 @@
           <span id="fullscreen-balance" class="fullscreen-widget-value">0</span>
           <button type="button" id="balance-toggle-btn" class="mobile-toggle-btn" aria-label="Minimize balance" title="Minimize balance">−</button>
         </div>
-        <div id="global-stats-panel" class="global-stats-panel" aria-hidden="true" data-mobile-state="full">
-          <div class="global-stats-panel-header">
-            <h4 class="global-stats-panel-title">Global stats</h4>
-            <button type="button" id="stats-toggle-btn" class="mobile-toggle-btn" aria-label="Minimize stats" title="Minimize stats">−</button>
-          </div>
-          <div class="global-stats-name-section">
-            <label class="global-stats-name-label">Name</label>
-            <div class="global-stats-name-row">
-              <input type="text" id="user-name-input" class="global-stats-name-input" maxlength="32" placeholder="Your name" />
-              <button id="user-name-save" class="global-stats-name-save">Save</button>
-            </div>
-          </div>
-          <div id="global-stats-total" class="global-stats-total">0 throws</div>
-          <div class="global-stats-leaderboard-section">
-            <h5 class="global-stats-section-title">Most throws</h5>
-            <div id="global-stats-leaderboard" class="global-stats-leaderboard"></div>
-          </div>
-          <div class="global-stats-sixes-section">
-            <h5 class="global-stats-section-title">Sixes</h5>
-            <div id="global-stats-sixes" class="global-stats-sixes"></div>
-          </div>
-          <div id="global-stats-combos" class="global-stats-combos"></div>
-        </div>
         <div id="fullscreen-throw-list" class="fullscreen-throw-list" aria-hidden="true"></div>
-        <button id="mobile-expand-btn" class="mobile-expand-btn" aria-label="Show stats and balance" title="Show stats and balance" style="display: none">⋯</button>
+        <button id="mobile-expand-btn" class="mobile-expand-btn" aria-label="Show balance" title="Show balance" style="display: none">⋯</button>
         <button id="test-luck-btn" class="game-btn" title="Throw dice (Space). Press ` to show debug">Test luck</button>
+        <button id="stats-btn" class="overlay-btn overlay-btn-stats" title="Global stats" aria-label="Global stats">📊</button>
         <button id="achievements-btn" class="overlay-btn overlay-btn-achievements" title="Achievements" aria-label="Achievements">🏆</button>
         <button id="fullscreen-btn" class="overlay-btn overlay-btn-fullscreen debug-only" title="Full screen (F)" aria-label="Full screen">⛶</button>
         <button id="camera-view-btn" class="overlay-btn overlay-btn-camera debug-only" title="Switch to bottom view">↑</button>
@@ -346,6 +324,33 @@
       </div>
     </div>
     <div id="notification-container" class="notification-container"></div>
+    <div id="global-stats-modal" class="global-stats-modal" aria-hidden="true">
+      <div class="global-stats-modal-content">
+        <div class="global-stats-modal-header">
+          <h3 class="global-stats-modal-title">Global stats</h3>
+          <button id="global-stats-close" class="global-stats-close" aria-label="Close">&times;</button>
+        </div>
+        <div class="global-stats-modal-body">
+          <div class="global-stats-name-section">
+            <label class="global-stats-name-label">Name</label>
+            <div class="global-stats-name-row">
+              <input type="text" id="user-name-input" class="global-stats-name-input" maxlength="32" placeholder="Your name" />
+              <button id="user-name-save" class="global-stats-name-save">Save</button>
+            </div>
+          </div>
+          <div id="global-stats-total" class="global-stats-total">0 throws</div>
+          <div class="global-stats-leaderboard-section">
+            <h5 class="global-stats-section-title">Most throws</h5>
+            <div id="global-stats-leaderboard" class="global-stats-leaderboard"></div>
+          </div>
+          <div class="global-stats-sixes-section">
+            <h5 class="global-stats-section-title">Sixes</h5>
+            <div id="global-stats-sixes" class="global-stats-sixes"></div>
+          </div>
+          <div id="global-stats-combos" class="global-stats-combos"></div>
+        </div>
+      </div>
+    </div>
     <div id="achievements-modal" class="achievements-modal" aria-hidden="true">
       <div class="achievements-modal-content">
         <div class="achievements-modal-header">

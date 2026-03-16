@@ -300,15 +300,19 @@ async function init() {
     fullscreenBalanceEl.textContent = String(totalScore)
   }
 
+  const THROW_ITEM_AUTOFADE_MS = 5000
+
+  function fadeAndRemoveThrowItem(item: HTMLElement) {
+    if (!item.isConnected) return
+    throwListObserver.unobserve(item)
+    item.classList.add('fading')
+    setTimeout(() => item.remove(), 500)
+  }
+
   const throwListObserver = new IntersectionObserver(
     (entries) => {
       for (const e of entries) {
-        if (!e.isIntersecting) {
-          const item = e.target as HTMLElement
-          throwListObserver.unobserve(item)
-          item.classList.add('fading')
-          setTimeout(() => item.remove(), 500)
-        }
+        if (!e.isIntersecting) fadeAndRemoveThrowItem(e.target as HTMLElement)
       }
     },
     { root: fullscreenThrowListEl, rootMargin: '0px', threshold: 0 }
@@ -336,27 +340,26 @@ async function init() {
     void item.offsetHeight
     item.classList.add('visible')
     throwListObserver.observe(item)
+    setTimeout(() => fadeAndRemoveThrowItem(item), THROW_ITEM_AUTOFADE_MS)
   }
 
   const fullscreenBalanceWidget = document.getElementById('fullscreen-balance-widget')!
   const fullscreenThrowList = document.getElementById('fullscreen-throw-list')!
-  const globalStatsPanel = document.getElementById('global-stats-panel')!
   const balanceToggleBtn = document.getElementById('balance-toggle-btn')!
-  const statsToggleBtn = document.getElementById('stats-toggle-btn')!
   const mobileExpandBtn = document.getElementById('mobile-expand-btn')!
 
   const MOBILE_LAYOUT_KEY = 'dice-mobile-layout'
-  type MobileLayoutState = { balance: 'full' | 'minimized' | 'hidden'; stats: 'full' | 'hidden' }
+  type MobileLayoutState = { balance: 'full' | 'minimized' | 'hidden' }
 
   function getMobileLayoutState(): MobileLayoutState {
     try {
       const s = localStorage.getItem(MOBILE_LAYOUT_KEY)
       if (s) {
         const parsed = JSON.parse(s) as MobileLayoutState
-        if (parsed.balance && parsed.stats) return parsed
+        if (parsed.balance) return parsed
       }
     } catch (_) {}
-    return { balance: 'full', stats: 'full' }
+    return { balance: 'full' }
   }
 
   function setMobileLayoutState(state: MobileLayoutState) {
@@ -367,18 +370,14 @@ async function init() {
 
   function applyMobileLayoutState(state: MobileLayoutState) {
     fullscreenBalanceWidget.dataset.mobileState = state.balance
-    globalStatsPanel.dataset.mobileState = state.stats
-    const collapsed = state.balance !== 'full' || state.stats !== 'full'
-    const anyHidden = state.balance === 'hidden' || state.stats === 'hidden'
+    const collapsed = state.balance !== 'full'
+    const anyHidden = state.balance === 'hidden'
     canvasContainer.classList.toggle('mobile-ui-collapsed', collapsed)
     canvasContainer.classList.toggle('mobile-balance-hidden', state.balance === 'hidden')
     canvasContainer.classList.toggle('mobile-expand-visible', anyHidden)
     balanceToggleBtn.setAttribute('aria-label', state.balance === 'full' ? 'Minimize balance' : state.balance === 'minimized' ? 'Hide balance' : 'Show balance')
     balanceToggleBtn.setAttribute('title', state.balance === 'full' ? 'Minimize balance' : state.balance === 'minimized' ? 'Hide balance' : 'Show balance')
     balanceToggleBtn.textContent = state.balance === 'hidden' ? '+' : '−'
-    statsToggleBtn.setAttribute('aria-label', state.stats === 'full' ? 'Hide stats' : 'Show stats')
-    statsToggleBtn.setAttribute('title', state.stats === 'full' ? 'Hide stats' : 'Show stats')
-    statsToggleBtn.textContent = state.stats === 'full' ? '−' : '+'
   }
 
   function initMobileLayout() {
@@ -396,18 +395,30 @@ async function init() {
     applyMobileLayoutState(state)
   })
 
-  statsToggleBtn.addEventListener('click', (e) => {
-    e.stopPropagation()
-    const state = getMobileLayoutState()
-    state.stats = state.stats === 'full' ? 'hidden' : 'full'
+  mobileExpandBtn.addEventListener('click', () => {
+    const state: MobileLayoutState = { balance: 'full' }
     setMobileLayoutState(state)
     applyMobileLayoutState(state)
   })
 
-  mobileExpandBtn.addEventListener('click', () => {
-    const state: MobileLayoutState = { balance: 'full', stats: 'full' }
-    setMobileLayoutState(state)
-    applyMobileLayoutState(state)
+  const globalStatsModal = document.getElementById('global-stats-modal')!
+  const globalStatsCloseBtn = document.getElementById('global-stats-close')!
+
+  function openGlobalStatsModal() {
+    fetchGlobalStats()
+    globalStatsModal.classList.add('visible')
+    globalStatsModal.ariaHidden = 'false'
+  }
+
+  function closeGlobalStatsModal() {
+    globalStatsModal.classList.remove('visible')
+    globalStatsModal.ariaHidden = 'true'
+  }
+
+  document.getElementById('stats-btn')!.addEventListener('click', openGlobalStatsModal)
+  globalStatsCloseBtn.addEventListener('click', closeGlobalStatsModal)
+  globalStatsModal.addEventListener('click', (e) => {
+    if (e.target === globalStatsModal) closeGlobalStatsModal()
   })
 
   function setGameMode(enabled: boolean) {
@@ -415,7 +426,6 @@ async function init() {
     app.classList.toggle('game-mode', gameMode)
     fullscreenBalanceWidget.ariaHidden = enabled ? 'false' : 'true'
     fullscreenThrowList.ariaHidden = enabled ? 'false' : 'true'
-    globalStatsPanel.ariaHidden = enabled ? 'false' : 'true'
     if (gameMode) {
       setScreenMode('preview')
       updateGameOverlay()
