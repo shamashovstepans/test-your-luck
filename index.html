@@ -7,6 +7,15 @@
     <link rel="stylesheet" href="/src/styles.css" />
   </head>
   <body>
+    <!-- iPhone simulation: add ?device=iphone to URL to test mobile layout -->
+    <script>
+      (function() {
+        const params = new URLSearchParams(location.search);
+        if (params.get('device') === 'iphone' || params.get('simulate') === 'iphone') {
+          document.documentElement.classList.add('device-sim-iphone');
+        }
+      })();
+    </script>
     <div id="app" class="game-mode">
       <div id="screen-tabs" class="debug-only">
         <button id="tab-sixes" class="screen-tab active">Sixes</button>
@@ -38,12 +47,16 @@
       </div>
       <div id="main-area">
       <div id="canvas-container">
-        <div id="fullscreen-balance-widget" class="fullscreen-balance-widget" aria-hidden="true">
+        <div id="fullscreen-balance-widget" class="fullscreen-balance-widget" aria-hidden="true" data-mobile-state="full">
           <span class="fullscreen-widget-label">Balance</span>
           <span id="fullscreen-balance" class="fullscreen-widget-value">0</span>
+          <button type="button" id="balance-toggle-btn" class="mobile-toggle-btn" aria-label="Minimize balance" title="Minimize balance">−</button>
         </div>
-        <div id="global-stats-panel" class="global-stats-panel" aria-hidden="true">
-          <h4 class="global-stats-panel-title">Global stats</h4>
+        <div id="global-stats-panel" class="global-stats-panel" aria-hidden="true" data-mobile-state="full">
+          <div class="global-stats-panel-header">
+            <h4 class="global-stats-panel-title">Global stats</h4>
+            <button type="button" id="stats-toggle-btn" class="mobile-toggle-btn" aria-label="Minimize stats" title="Minimize stats">−</button>
+          </div>
           <div class="global-stats-name-section">
             <label class="global-stats-name-label">Name</label>
             <div class="global-stats-name-row">
@@ -63,6 +76,7 @@
           <div id="global-stats-combos" class="global-stats-combos"></div>
         </div>
         <div id="fullscreen-throw-list" class="fullscreen-throw-list" aria-hidden="true"></div>
+        <button id="mobile-expand-btn" class="mobile-expand-btn" aria-label="Show stats and balance" title="Show stats and balance" style="display: none">⋯</button>
         <button id="test-luck-btn" class="game-btn" title="Throw dice (Space). Press ` to show debug">Test luck</button>
         <button id="achievements-btn" class="overlay-btn overlay-btn-achievements" title="Achievements" aria-label="Achievements">🏆</button>
         <button id="fullscreen-btn" class="overlay-btn overlay-btn-fullscreen debug-only" title="Full screen (F)" aria-label="Full screen">⛶</button>
@@ -102,6 +116,26 @@
       <div id="controls" class="debug-only">
         <div class="controls-section dice-preview-section">
           <h3 class="section-title">Dice model</h3>
+          <details class="dice-colors-section" id="dice-colors-details">
+            <summary>Dice colors</summary>
+            <div class="dice-colors-grid">
+              <label class="dice-color-control"><span>Default</span><input type="color" id="dice-color-default" value="#b91c1c" /></label>
+              <label class="dice-color-control"><span>Single</span><input type="color" id="dice-color-single" value="#94a3b8" /></label>
+              <label class="dice-color-control"><span>Pair</span><input type="color" id="dice-color-pair" value="#0f52ba" /></label>
+              <label class="dice-color-control"><span>Triple</span><input type="color" id="dice-color-triple" value="#10b981" /></label>
+              <label class="dice-color-control"><span>Quad</span><input type="color" id="dice-color-quad" value="#7c3aed" /></label>
+              <label class="dice-color-control"><span>Five</span><input type="color" id="dice-color-five" value="#f59e0b" /></label>
+              <label class="dice-color-control"><span>Six</span><input type="color" id="dice-color-six" value="#dc2626" /></label>
+              <label class="dice-color-control"><span>Small straight</span><input type="color" id="dice-color-small-straight" value="#0891b2" /></label>
+              <label class="dice-color-control"><span>Large straight</span><input type="color" id="dice-color-large-straight" value="#6d28d9" /></label>
+              <label class="dice-color-control"><span>Full house</span><input type="color" id="dice-color-full-house" value="#ea580c" /></label>
+              <label class="dice-color-control"><span>Six of a kind</span><input type="color" id="dice-color-six-of-a-kind" value="#b91c1c" /></label>
+            </div>
+            <div class="dice-colors-actions">
+              <button type="button" id="dice-colors-reset" class="dice-colors-reset">Reset</button>
+              <button type="button" id="dice-colors-save-project" class="dice-colors-reset" title="Download dice-colors.json to save in public/ folder">Save to project</button>
+            </div>
+          </details>
           <label class="slider-control">
             <span class="slider-label">Glossiness</span>
             <input type="range" id="glossiness" min="0" max="1" step="0.05" value="0.88" />

@@ -3,7 +3,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { inject, track } from '@vercel/analytics'
 import { createScene, createDiceModelEnvironment, onResize, setPerformanceMode, getCameraForAllRooms, getCameraForRoom, startCameraAnimation, updateCameraAnimation, setMainLightDirection, type CameraAnimationState, type CameraView } from './scene'
 import { initRapier, createPhysicsWorld, throwDice, stepPhysics, isSettled, isOutOfBounds, syncRigidBodyToMesh, updateDiceMass, setGravity, getDiceResult, getFixedStep, type PhysicsState, type ThrowOptions, type SpawnLayout, type TargetMode, type PatternPreset } from './physics'
-import { createRoomVisuals, createSingleDice, setDiceGlossiness, updateWallTransparency, applyDiceComboVFX, clearDiceComboVFX } from './visuals'
+import { createRoomVisuals, createSingleDice, setDiceGlossiness, updateWallTransparency, applyDiceComboVFX, clearDiceComboVFX, setDiceComboColors, setDiceDefaultColor, getDefaultDiceColors } from './visuals'
 import {
   getAchievementsToClaim,
   claimAchievements,
@@ -341,6 +341,74 @@ async function init() {
   const fullscreenBalanceWidget = document.getElementById('fullscreen-balance-widget')!
   const fullscreenThrowList = document.getElementById('fullscreen-throw-list')!
   const globalStatsPanel = document.getElementById('global-stats-panel')!
+  const balanceToggleBtn = document.getElementById('balance-toggle-btn')!
+  const statsToggleBtn = document.getElementById('stats-toggle-btn')!
+  const mobileExpandBtn = document.getElementById('mobile-expand-btn')!
+
+  const MOBILE_LAYOUT_KEY = 'dice-mobile-layout'
+  type MobileLayoutState = { balance: 'full' | 'minimized' | 'hidden'; stats: 'full' | 'hidden' }
+
+  function getMobileLayoutState(): MobileLayoutState {
+    try {
+      const s = localStorage.getItem(MOBILE_LAYOUT_KEY)
+      if (s) {
+        const parsed = JSON.parse(s) as MobileLayoutState
+        if (parsed.balance && parsed.stats) return parsed
+      }
+    } catch (_) {}
+    return { balance: 'full', stats: 'full' }
+  }
+
+  function setMobileLayoutState(state: MobileLayoutState) {
+    try {
+      localStorage.setItem(MOBILE_LAYOUT_KEY, JSON.stringify(state))
+    } catch (_) {}
+  }
+
+  function applyMobileLayoutState(state: MobileLayoutState) {
+    fullscreenBalanceWidget.dataset.mobileState = state.balance
+    globalStatsPanel.dataset.mobileState = state.stats
+    const collapsed = state.balance !== 'full' || state.stats !== 'full'
+    const anyHidden = state.balance === 'hidden' || state.stats === 'hidden'
+    canvasContainer.classList.toggle('mobile-ui-collapsed', collapsed)
+    canvasContainer.classList.toggle('mobile-balance-hidden', state.balance === 'hidden')
+    canvasContainer.classList.toggle('mobile-expand-visible', anyHidden)
+    balanceToggleBtn.setAttribute('aria-label', state.balance === 'full' ? 'Minimize balance' : state.balance === 'minimized' ? 'Hide balance' : 'Show balance')
+    balanceToggleBtn.setAttribute('title', state.balance === 'full' ? 'Minimize balance' : state.balance === 'minimized' ? 'Hide balance' : 'Show balance')
+    balanceToggleBtn.textContent = state.balance === 'hidden' ? '+' : '−'
+    statsToggleBtn.setAttribute('aria-label', state.stats === 'full' ? 'Hide stats' : 'Show stats')
+    statsToggleBtn.setAttribute('title', state.stats === 'full' ? 'Hide stats' : 'Show stats')
+    statsToggleBtn.textContent = state.stats === 'full' ? '−' : '+'
+  }
+
+  function initMobileLayout() {
+    const state = getMobileLayoutState()
+    applyMobileLayoutState(state)
+  }
+
+  balanceToggleBtn.addEventListener('click', (e) => {
+    e.stopPropagation()
+    const state = getMobileLayoutState()
+    if (state.balance === 'full') state.balance = 'minimized'
+    else if (state.balance === 'minimized') state.balance = 'hidden'
+    else state.balance = 'full'
+    setMobileLayoutState(state)
+    applyMobileLayoutState(state)
+  })
+
+  statsToggleBtn.addEventListener('click', (e) => {
+    e.stopPropagation()
+    const state = getMobileLayoutState()
+    state.stats = state.stats === 'full' ? 'hidden' : 'full'
+    setMobileLayoutState(state)
+    applyMobileLayoutState(state)
+  })
+
+  mobileExpandBtn.addEventListener('click', () => {
+    const state: MobileLayoutState = { balance: 'full', stats: 'full' }
+    setMobileLayoutState(state)
+    applyMobileLayoutState(state)
+  })
 
   function setGameMode(enabled: boolean) {
     gameMode = enabled
@@ -1280,7 +1348,20 @@ async function init() {
     targetMode: 'single' as TargetMode,
     patternPreset: 'none' as PatternPreset,
     cameraPosition: { x: -6.35, y: 17.82, z: 0.24 } as CameraPreset,
-    cameraTarget: { x: -2.61, y: -2.58, z: 0.25 } as CameraPreset
+    cameraTarget: { x: -2.61, y: -2.58, z: 0.25 } as CameraPreset,
+    diceColors: {
+      default: '#b91c1c',
+      single: '#94a3b8',
+      pair: '#0f52ba',
+      triple: '#10b981',
+      quad: '#7c3aed',
+      five: '#f59e0b',
+      six: '#dc2626',
+      'small-straight': '#0891b2',
+      'large-straight': '#6d28d9',
+      'full-house': '#ea580c',
+      'six-of-a-kind': '#b91c1c'
+    }
   }
 
   const loadDefaults = (): typeof HARDCODED_DEFAULTS => {
@@ -1292,6 +1373,19 @@ async function init() {
   }
 
   let savedDefaults = loadDefaults()
+
+  // Load dice colors from project file (public/dice-colors.json) if not in localStorage
+  if (!savedDefaults.diceColors) {
+    try {
+      const r = await fetch('/dice-colors.json')
+      if (r.ok) {
+        const projectColors = (await r.json()) as Record<string, string>
+        if (projectColors && typeof projectColors.default === 'string') {
+          savedDefaults = { ...savedDefaults, diceColors: { ...HARDCODED_DEFAULTS.diceColors, ...projectColors } }
+        }
+      }
+    } catch (_) {}
+  }
 
   const applyDefaults = () => {
     const d = savedDefaults
@@ -1373,6 +1467,17 @@ async function init() {
     for (const r of rooms) setDiceGlossiness(r.diceMeshes, g)
     if (previewDiceMeshes.length) setDiceGlossiness(previewDiceMeshes, g)
     setDiceGlossiness([diceModel], g)
+    if (d.diceColors) {
+      const dc = d.diceColors as Record<string, string>
+      const defaultEl = document.getElementById('dice-color-default') as HTMLInputElement
+      if (defaultEl && dc.default) defaultEl.value = dc.default
+      for (const slug of ['single', 'pair', 'triple', 'quad', 'five', 'six', 'small-straight', 'large-straight', 'full-house', 'six-of-a-kind']) {
+        const el = document.getElementById(`dice-color-${slug}`) as HTMLInputElement
+        if (el && dc[slug]) el.value = dc[slug]
+      }
+      applyDiceColorsFromUI()
+      reapplyDiceComboVFX()
+    }
   }
 
   const saveCameraPosition = () => {
@@ -1428,7 +1533,17 @@ async function init() {
       targetMode: opts.targetMode ?? 'single',
       patternPreset: opts.patternPreset ?? 'none',
       cameraPosition: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
-      cameraTarget: { x: controls.target.x, y: controls.target.y, z: controls.target.z }
+      cameraTarget: { x: controls.target.x, y: controls.target.y, z: controls.target.z },
+      diceColors: (() => {
+        const dc = { ...HARDCODED_DEFAULTS.diceColors }
+        const defaultEl = document.getElementById('dice-color-default') as HTMLInputElement
+        if (defaultEl) dc.default = defaultEl.value
+        for (const slug of ['single', 'pair', 'triple', 'quad', 'five', 'six', 'small-straight', 'large-straight', 'full-house', 'six-of-a-kind']) {
+          const el = document.getElementById(`dice-color-${slug}`) as HTMLInputElement
+          if (el) dc[slug as keyof typeof dc] = el.value
+        }
+        return dc
+      })()
     }
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(savedDefaults))
@@ -1488,6 +1603,105 @@ async function init() {
     lightAmbientValue.textContent = lightAmbientSlider.value
     applyLighting()
   })
+
+  const DICE_COLOR_IDS = ['default', 'single', 'pair', 'triple', 'quad', 'five', 'six', 'small-straight', 'large-straight', 'full-house', 'six-of-a-kind'] as const
+  function applyDiceColorsFromUI() {
+    const defaultEl = document.getElementById('dice-color-default') as HTMLInputElement
+    const defaultHex = defaultEl ? parseInt(defaultEl.value.slice(1), 16) : 0xb91c1c
+    setDiceDefaultColor(defaultHex)
+    const combos: Record<string, number> = {}
+    for (const id of DICE_COLOR_IDS) {
+      if (id === 'default') continue
+      const el = document.getElementById(`dice-color-${id}`) as HTMLInputElement
+      if (el) combos[id] = parseInt(el.value.slice(1), 16)
+    }
+    setDiceComboColors(combos)
+    if (diceModel?.children[0] instanceof THREE.Mesh && diceModel.children[0].material instanceof THREE.MeshPhysicalMaterial) {
+      const mat = diceModel.children[0].material
+      mat.color.setHex(defaultHex)
+      mat.emissive.setHex(0)
+    }
+  }
+  function reapplyDiceComboVFX() {
+    for (const room of rooms) {
+      if (room.physics.simulatingThrow || room.physics.pendingThrow) continue
+      if (isSettled(room.physics, SETTLE_THRESHOLD)) {
+        const diceResult = getDiceResult(room.physics)
+        const breakdown = computeScoreBreakdown(diceResult)
+        applyDiceComboVFX(room.diceMeshes, diceResult, breakdown.badges)
+      } else {
+        clearDiceComboVFX(room.diceMeshes)
+      }
+    }
+    if (previewPhysics && previewDiceMeshes.length && !previewPhysics.simulatingThrow && !previewPhysics.pendingThrow && isSettled(previewPhysics, SETTLE_THRESHOLD)) {
+      const diceResult = getDiceResult(previewPhysics)
+      const breakdown = computeScoreBreakdown(diceResult)
+      applyDiceComboVFX(previewDiceMeshes, diceResult, breakdown.badges)
+    } else if (previewDiceMeshes.length) {
+      clearDiceComboVFX(previewDiceMeshes)
+    }
+  }
+  function saveDiceColorsToStorage() {
+    const dc = { ...HARDCODED_DEFAULTS.diceColors }
+    const defaultEl = document.getElementById('dice-color-default') as HTMLInputElement
+    if (defaultEl) dc.default = defaultEl.value
+    for (const slug of ['single', 'pair', 'triple', 'quad', 'five', 'six', 'small-straight', 'large-straight', 'full-house', 'six-of-a-kind']) {
+      const el = document.getElementById(`dice-color-${slug}`) as HTMLInputElement
+      if (el) dc[slug as keyof typeof dc] = el.value
+    }
+    savedDefaults = { ...savedDefaults, diceColors: dc }
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(savedDefaults))
+    } catch (_) {}
+  }
+  function setupDiceColorPickers() {
+    applyDiceColorsFromUI()
+    for (const id of DICE_COLOR_IDS) {
+      const el = document.getElementById(`dice-color-${id}`) as HTMLInputElement
+      if (el) {
+        el.addEventListener('input', () => {
+          applyDiceColorsFromUI()
+          reapplyDiceComboVFX()
+          saveDiceColorsToStorage()
+        })
+      }
+    }
+    const resetBtn = document.getElementById('dice-colors-reset')
+    if (resetBtn) {
+      resetBtn.addEventListener('click', () => {
+        const def = getDefaultDiceColors()
+        const defaultEl = document.getElementById('dice-color-default') as HTMLInputElement
+        if (defaultEl) defaultEl.value = '#' + def.default.toString(16).padStart(6, '0')
+        for (const [slug, hex] of Object.entries(def.combos)) {
+          const el = document.getElementById(`dice-color-${slug}`) as HTMLInputElement
+          if (el) el.value = '#' + hex.toString(16).padStart(6, '0')
+        }
+        applyDiceColorsFromUI()
+        reapplyDiceComboVFX()
+        saveDiceColorsToStorage()
+      })
+    }
+    const saveProjectBtn = document.getElementById('dice-colors-save-project')
+    if (saveProjectBtn) {
+      saveProjectBtn.addEventListener('click', () => {
+        const dc: Record<string, string> = {}
+        const defaultEl = document.getElementById('dice-color-default') as HTMLInputElement
+        if (defaultEl) dc.default = defaultEl.value
+        for (const slug of ['single', 'pair', 'triple', 'quad', 'five', 'six', 'small-straight', 'large-straight', 'full-house', 'six-of-a-kind']) {
+          const el = document.getElementById(`dice-color-${slug}`) as HTMLInputElement
+          if (el) dc[slug] = el.value
+        }
+        const blob = new Blob([JSON.stringify(dc, null, 2)], { type: 'application/json' })
+        const a = document.createElement('a')
+        a.href = URL.createObjectURL(blob)
+        a.download = 'dice-colors.json'
+        a.click()
+        URL.revokeObjectURL(a.href)
+        showNotification('Saved dice-colors.json — put in public/ folder and commit', 'info')
+      })
+    }
+  }
+  setupDiceColorPickers()
 
   weightSlider.addEventListener('input', () => {
     weightValue.textContent = weightSlider.value
@@ -1720,7 +1934,7 @@ async function init() {
     recalculateStatsBtn.disabled = true
     recalculateStatsStatus.textContent = 'Running…'
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 90_000)
+    const timeoutId = setTimeout(() => controller.abort(), 330_000)
     try {
       const r = await fetch('/api/recalculate-stats', {
         method: 'POST',
@@ -1744,7 +1958,7 @@ async function init() {
     } catch (err) {
       clearTimeout(timeoutId)
       recalculateStatsStatus.textContent =
-        err instanceof Error && err.name === 'AbortError' ? 'Timed out (90s)' : 'Network error'
+        err instanceof Error && err.name === 'AbortError' ? 'Timed out (5.5 min)' : 'Network error'
     } finally {
       recalculateStatsBtn.disabled = false
       setTimeout(() => { recalculateStatsStatus.textContent = '' }, 5000)
@@ -1818,6 +2032,7 @@ async function init() {
 
   applyDefaults()
   setGameMode(true)
+  initMobileLayout()
   if (!gameMode) {
     queueThrows()
   }

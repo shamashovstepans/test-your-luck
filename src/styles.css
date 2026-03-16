@@ -9,6 +9,20 @@ html {
   -webkit-text-size-adjust: 100%;
 }
 
+/* iPhone simulation: add ?device=iphone to URL for mobile testing */
+html.device-sim-iphone body {
+  max-width: 390px;
+  max-height: 844px;
+  min-height: 844px;
+  margin: auto;
+  box-shadow: 0 0 0 2px rgba(0,0,0,0.1);
+  border-radius: 40px;
+  overflow: hidden;
+}
+html.device-sim-iphone #app {
+  border-radius: 40px;
+}
+
 body {
   font-family: system-ui, -apple-system, sans-serif;
   overflow: hidden;
@@ -20,6 +34,7 @@ body {
 #app {
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   position: relative;
@@ -135,6 +150,70 @@ body {
   line-height: 1.3;
 }
 
+.dice-colors-section {
+  font-size: 11px;
+  margin-bottom: 12px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
+}
+
+.dice-colors-section summary {
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 600;
+}
+
+.dice-colors-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px 12px;
+  margin-top: 10px;
+}
+
+.dice-color-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 11px;
+}
+
+.dice-color-control span {
+  flex: 1;
+  min-width: 0;
+}
+
+.dice-color-control input[type="color"] {
+  width: 32px;
+  height: 24px;
+  padding: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.dice-colors-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.dice-colors-reset {
+  padding: 4px 10px;
+  font-size: 11px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+}
+
+.dice-colors-reset:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
 .scoring-entry {
   display: flex;
   flex-direction: column;
@@ -198,18 +277,18 @@ body {
 
 .scoring-badge.badge-combo-five .scoring-badge-score { color: #1a1a2e; }
 
-/* Combo colors - each combination gets its own color */
-.scoring-badge.badge-combo-single { background: rgba(149, 165, 166, 0.35); color: rgba(255, 255, 255, 0.9); }
-.scoring-badge.badge-combo-pair { background: rgba(52, 152, 219, 0.4); color: #fff; }
-.scoring-badge.badge-combo-triple { background: rgba(46, 204, 113, 0.4); color: #fff; }
-.scoring-badge.badge-combo-quad { background: rgba(155, 89, 182, 0.4); color: #fff; }
-.scoring-badge.badge-combo-five { background: rgba(241, 196, 15, 0.45); color: #1a1a2e; }
+/* Combo colors - jewel tones: sapphire, emerald, amethyst */
+.scoring-badge.badge-combo-single { background: rgba(148, 163, 184, 0.4); color: rgba(255, 255, 255, 0.9); }
+.scoring-badge.badge-combo-pair { background: rgba(15, 82, 186, 0.5); color: #fff; }
+.scoring-badge.badge-combo-triple { background: rgba(16, 185, 129, 0.5); color: #fff; }
+.scoring-badge.badge-combo-quad { background: rgba(124, 58, 237, 0.5); color: #fff; }
+.scoring-badge.badge-combo-five { background: rgba(245, 158, 11, 0.5); color: #1a1a2e; }
 .scoring-badge.badge-combo-five .scoring-badge-values { color: #1a1a2e; }
-.scoring-badge.badge-combo-six { background: rgba(231, 76, 60, 0.45); color: #fff; }
-.scoring-badge.badge-combo-small-straight { background: rgba(26, 188, 156, 0.45); color: #fff; }
-.scoring-badge.badge-combo-large-straight { background: rgba(142, 68, 173, 0.5); color: #fff; }
-.scoring-badge.badge-combo-full-house { background: rgba(230, 126, 34, 0.5); color: #fff; }
-.scoring-badge.badge-combo-six-of-a-kind { background: rgba(192, 57, 43, 0.55); color: #fff; }
+.scoring-badge.badge-combo-six { background: rgba(220, 38, 38, 0.5); color: #fff; }
+.scoring-badge.badge-combo-small-straight { background: rgba(8, 145, 178, 0.5); color: #fff; }
+.scoring-badge.badge-combo-large-straight { background: rgba(109, 40, 217, 0.55); color: #fff; }
+.scoring-badge.badge-combo-full-house { background: rgba(234, 88, 12, 0.55); color: #fff; }
+.scoring-badge.badge-combo-six-of-a-kind { background: rgba(185, 28, 28, 0.6); color: #fff; }
 
 .scoring-badge-escaped {
   background: rgba(127, 140, 141, 0.3) !important;
@@ -433,6 +512,66 @@ body {
   display: none;
 }
 
+/* Mobile toggle buttons - visible only on small screens */
+.mobile-toggle-btn {
+  display: none;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.mobile-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.mobile-expand-btn {
+  display: none;
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 11;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.mobile-expand-btn:hover {
+  background: rgba(0, 0, 0, 0.75);
+}
+
+.global-stats-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.global-stats-panel-header .global-stats-panel-title {
+  margin: 0;
+}
+
 /* Balance widget: persistent, top-left, always visible in game mode */
 .fullscreen-balance-widget {
   display: none;
@@ -447,6 +586,10 @@ body {
   pointer-events: none;
   align-items: baseline;
   gap: 8px;
+}
+
+.fullscreen-balance-widget .mobile-toggle-btn {
+  pointer-events: auto;
 }
 
 .fullscreen-balance-widget .fullscreen-widget-label {
@@ -554,16 +697,16 @@ body {
   color: rgba(255, 255, 255, 0.7);
 }
 
-.fullscreen-throw-badge.badge-combo-single { background: rgba(149, 165, 166, 0.4); color: #fff; }
-.fullscreen-throw-badge.badge-combo-pair { background: rgba(52, 152, 219, 0.5); color: #fff; }
-.fullscreen-throw-badge.badge-combo-triple { background: rgba(46, 204, 113, 0.5); color: #fff; }
-.fullscreen-throw-badge.badge-combo-quad { background: rgba(155, 89, 182, 0.5); color: #fff; }
-.fullscreen-throw-badge.badge-combo-five { background: rgba(241, 196, 15, 0.55); color: #1a1a2e; }
-.fullscreen-throw-badge.badge-combo-six { background: rgba(231, 76, 60, 0.55); color: #fff; }
-.fullscreen-throw-badge.badge-combo-small-straight { background: rgba(26, 188, 156, 0.55); color: #fff; }
-.fullscreen-throw-badge.badge-combo-large-straight { background: rgba(142, 68, 173, 0.6); color: #fff; }
-.fullscreen-throw-badge.badge-combo-full-house { background: rgba(230, 126, 34, 0.6); color: #fff; }
-.fullscreen-throw-badge.badge-combo-six-of-a-kind { background: rgba(192, 57, 43, 0.65); color: #fff; }
+.fullscreen-throw-badge.badge-combo-single { background: rgba(148, 163, 184, 0.45); color: #fff; }
+.fullscreen-throw-badge.badge-combo-pair { background: rgba(15, 82, 186, 0.55); color: #fff; }
+.fullscreen-throw-badge.badge-combo-triple { background: rgba(16, 185, 129, 0.55); color: #fff; }
+.fullscreen-throw-badge.badge-combo-quad { background: rgba(124, 58, 237, 0.55); color: #fff; }
+.fullscreen-throw-badge.badge-combo-five { background: rgba(245, 158, 11, 0.55); color: #1a1a2e; }
+.fullscreen-throw-badge.badge-combo-six { background: rgba(220, 38, 38, 0.55); color: #fff; }
+.fullscreen-throw-badge.badge-combo-small-straight { background: rgba(8, 145, 178, 0.55); color: #fff; }
+.fullscreen-throw-badge.badge-combo-large-straight { background: rgba(109, 40, 217, 0.6); color: #fff; }
+.fullscreen-throw-badge.badge-combo-full-house { background: rgba(234, 88, 12, 0.6); color: #fff; }
+.fullscreen-throw-badge.badge-combo-six-of-a-kind { background: rgba(185, 28, 28, 0.65); color: #fff; }
 
 #controls {
   width: 220px;
@@ -1035,6 +1178,7 @@ body {
   left: 0;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: row;
 }
@@ -1357,11 +1501,42 @@ body {
 
 /* Mobile vertical layout */
 @media (max-width: 600px), (max-height: 500px) {
+  .mobile-toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
   #app.game-mode .fullscreen-balance-widget {
     top: max(12px, env(safe-area-inset-top));
     left: max(12px, env(safe-area-inset-left));
     padding: 8px 12px;
     gap: 6px;
+    pointer-events: auto;
+  }
+
+  /* Balance: minimized = compact pill (label hidden, value + toggle visible) */
+  .fullscreen-balance-widget[data-mobile-state="minimized"] .fullscreen-widget-label {
+    display: none;
+  }
+
+  .fullscreen-balance-widget[data-mobile-state="minimized"] {
+    padding: 6px 10px;
+  }
+
+  .fullscreen-balance-widget[data-mobile-state="minimized"] .fullscreen-widget-value {
+    font-size: 14px;
+  }
+
+  .fullscreen-balance-widget[data-mobile-state="minimized"] .mobile-toggle-btn {
+    width: 20px;
+    height: 20px;
+    font-size: 14px;
+  }
+
+  /* Balance: hidden */
+  .fullscreen-balance-widget[data-mobile-state="hidden"] {
+    display: none !important;
   }
 
   .fullscreen-balance-widget .fullscreen-widget-label {
@@ -1372,12 +1547,25 @@ body {
     font-size: 16px;
   }
 
+  /* Expand button: shown via JS when balance or stats is hidden (to restore UI) */
+  #canvas-container.mobile-expand-visible #mobile-expand-btn {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Throw list: hide when balance hidden */
   .fullscreen-throw-list {
     top: max(56px, calc(env(safe-area-inset-top) + 44px));
     left: max(12px, env(safe-area-inset-left));
     width: min(200px, 55vw);
     bottom: max(80px, calc(env(safe-area-inset-bottom) + 72px));
     gap: 6px;
+  }
+
+  /* Hide throw list only when balance is fully hidden */
+  .mobile-balance-hidden .fullscreen-throw-list {
+    display: none !important;
   }
 
   .fullscreen-throw-item {
@@ -1391,6 +1579,11 @@ body {
   .fullscreen-throw-badge {
     font-size: 9px;
     padding: 2px 6px;
+  }
+
+  /* Stats: hidden */
+  .global-stats-panel[data-mobile-state="hidden"] {
+    display: none !important;
   }
 
   .global-stats-panel {
@@ -1434,13 +1627,22 @@ body {
     font-size: 9px;
   }
 
+  /* Smaller throw button when stats/balance collapsed or hidden */
   #app.game-mode .game-btn {
-    bottom: max(24px, env(safe-area-inset-bottom));
+    bottom: max(20px, calc(env(safe-area-inset-bottom) + 12px));
     padding: 14px 28px;
     min-height: 48px;
     font-size: 16px;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
+  }
+
+  .mobile-ui-collapsed #app.game-mode .game-btn {
+    bottom: max(16px, calc(env(safe-area-inset-bottom) + 10px));
+    padding: 10px 20px;
+    min-height: 44px;
+    font-size: 14px;
+    border-radius: 10px;
   }
 
   .global-stats-panel {
