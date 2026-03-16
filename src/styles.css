@@ -1681,6 +1681,9 @@ body {
   .achievement-group-grid {
     grid-template-columns: repeat(8, 1fr);
     gap: 3px;
+    width: 100%;
+    justify-content: start;
+    justify-items: stretch;
   }
 
   .achievement-cell {
@@ -1800,12 +1803,14 @@ body {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  align-items: stretch;
 }
 
 .achievement-group {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  align-items: stretch;
 }
 
 .achievement-group-title {
@@ -1821,6 +1826,9 @@ body {
   display: grid;
   grid-template-columns: repeat(8, 1fr);
   gap: 8px;
+  width: 100%;
+  justify-content: start;
+  justify-items: start;
 }
 
 .achievement-cell {
@@ -1985,6 +1993,9 @@ body {
   .achievement-group-grid {
     grid-template-columns: repeat(8, 1fr);
     gap: 2px;
+    width: 100%;
+    justify-content: start;
+    justify-items: stretch;
   }
 
   .achievement-cell {
