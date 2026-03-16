@@ -262,7 +262,28 @@ export function updateWallTransparency(
 
 const TRAIL_LENGTH = 18
 const TRAIL_VELOCITY_THRESHOLD = 0.3
-const TRAIL_OPACITY = 0.2
+const TRAIL_WIDTH = 0.2
+const TRAIL_OPACITY = 0.35
+
+function createTrailGradientTexture(): THREE.CanvasTexture {
+  const size = 64
+  const canvas = document.createElement('canvas')
+  canvas.width = size
+  canvas.height = 4
+  const g = canvas.getContext('2d')!
+  const gradient = g.createLinearGradient(0, 0, size, 0)
+  gradient.addColorStop(0, 'rgba(255,255,255,0)')
+  gradient.addColorStop(0.3, 'rgba(255,255,255,0.15)')
+  gradient.addColorStop(0.7, 'rgba(255,255,255,0.5)')
+  gradient.addColorStop(1, 'rgba(255,255,255,0.9)')
+  g.fillStyle = gradient
+  g.fillRect(0, 0, size, 4)
+  const tex = new THREE.CanvasTexture(canvas)
+  tex.wrapS = THREE.ClampToEdgeWrapping
+  tex.wrapT = THREE.ClampToEdgeWrapping
+  return tex
+}
+const trailGradientTex = createTrailGradientTexture()
 
 export type DiceTrail = {
   update: (position: THREE.Vector3, velocityMagnitude: number) => void
@@ -271,23 +292,79 @@ export type DiceTrail = {
 }
 
 function createDiceTrail(parent: THREE.Object3D): DiceTrail {
-  const positions = new Float32Array(TRAIL_LENGTH * 3)
-  for (let i = 0; i < TRAIL_LENGTH * 3; i++) positions[i] = 0
-  const geo = new THREE.BufferGeometry()
-  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3))
-  geo.setDrawRange(0, 0)
-  const mat = new THREE.LineBasicMaterial({
-    color: 0xffffff,
-    transparent: true,
-    opacity: TRAIL_OPACITY,
-    linewidth: 1,
-    depthWrite: false
-  })
-  const line = new THREE.Line(geo, mat)
-  parent.add(line)
-
   const posBuffer: { x: number; y: number; z: number }[] = []
   let pointCount = 0
+
+  const geo = new THREE.BufferGeometry()
+  const maxVerts = (TRAIL_LENGTH - 1) * 6
+  const positions = new Float32Array(maxVerts * 3)
+  const uvs = new Float32Array(maxVerts * 2)
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+  geo.setAttribute('uv', new THREE.BufferAttribute(uvs, 2))
+  geo.setDrawRange(0, 0)
+
+  const mat = new THREE.MeshBasicMaterial({
+    map: trailGradientTex,
+    transparent: true,
+    opacity: TRAIL_OPACITY,
+    depthWrite: false,
+    side: THREE.DoubleSide
+  })
+  const mesh = new THREE.Mesh(geo, mat)
+  parent.add(mesh)
+
+  const up = new THREE.Vector3(0, 1, 0)
+  const right = new THREE.Vector3()
+  const dir = new THREE.Vector3()
+
+  function buildRibbon() {
+    if (pointCount < 2) {
+      geo.setDrawRange(0, 0)
+      return
+    }
+    const n = pointCount - 1
+    const posAttr = geo.getAttribute('position') as THREE.BufferAttribute
+    const uvAttr = geo.getAttribute('uv') as THREE.BufferAttribute
+    let vi = 0
+    for (let i = 0; i < n; i++) {
+      const p0 = posBuffer[i]
+      const p1 = posBuffer[i + 1]
+      dir.set(p1.x - p0.x, p1.y - p0.y, p1.z - p0.z)
+      right.crossVectors(dir, up)
+      if (right.lengthSq() < 1e-6) right.set(1, 0, 0)
+      else right.normalize().multiplyScalar(TRAIL_WIDTH / 2)
+      const u0 = i / n
+      const u1 = (i + 1) / n
+      const ax = p0.x + right.x
+      const ay = p0.y + right.y
+      const az = p0.z + right.z
+      const bx = p0.x - right.x
+      const by = p0.y - right.y
+      const bz = p0.z - right.z
+      const cx = p1.x - right.x
+      const cy = p1.y - right.y
+      const cz = p1.z - right.z
+      const dx = p1.x + right.x
+      const dy = p1.y + right.y
+      const dz = p1.z + right.z
+      posAttr.setXYZ(vi, ax, ay, az)
+      posAttr.setXYZ(vi + 1, bx, by, bz)
+      posAttr.setXYZ(vi + 2, cx, cy, cz)
+      posAttr.setXYZ(vi + 3, ax, ay, az)
+      posAttr.setXYZ(vi + 4, cx, cy, cz)
+      posAttr.setXYZ(vi + 5, dx, dy, dz)
+      uvAttr.setXY(vi, u0, 1)
+      uvAttr.setXY(vi + 1, u0, 0)
+      uvAttr.setXY(vi + 2, u1, 0)
+      uvAttr.setXY(vi + 3, u0, 1)
+      uvAttr.setXY(vi + 4, u1, 0)
+      uvAttr.setXY(vi + 5, u1, 1)
+      vi += 6
+    }
+    posAttr.needsUpdate = true
+    uvAttr.needsUpdate = true
+    geo.setDrawRange(0, vi)
+  }
 
   return {
     update(position: THREE.Vector3, velocityMagnitude: number) {
@@ -299,13 +376,7 @@ function createDiceTrail(parent: THREE.Object3D): DiceTrail {
       posBuffer.push({ x: position.x, y: position.y, z: position.z })
       if (posBuffer.length > TRAIL_LENGTH) posBuffer.shift()
       pointCount = posBuffer.length
-      const attr = geo.getAttribute('position') as THREE.BufferAttribute
-      for (let i = 0; i < pointCount; i++) {
-        const p = posBuffer[i]
-        attr.setXYZ(i, p.x, p.y, p.z)
-      }
-      attr.needsUpdate = true
-      geo.setDrawRange(0, pointCount < 2 ? 0 : pointCount)
+      buildRibbon()
     },
     clear() {
       posBuffer.length = 0
@@ -313,7 +384,7 @@ function createDiceTrail(parent: THREE.Object3D): DiceTrail {
       geo.setDrawRange(0, 0)
     },
     dispose() {
-      parent.remove(line)
+      parent.remove(mesh)
       geo.dispose()
       mat.dispose()
     }
